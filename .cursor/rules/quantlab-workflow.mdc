@@ -1,0 +1,10 @@
+---
+description: Project-wide workflow and skill-use rules for QuantLab
+alwaysApply: true
+---
+
+# QuantLab Workflow
+
+- Never push to GitHub or any remote. When a change is ready and this workspace is a Git repository, commit it locally and provide the exact command the user can run to push. Do not push on the user's behalf.
+- Before work, inspect `.agents/skills/` and use the relevant project-provided skills. Read each selected skill's `SKILL.md` and follow its workflow. Do not invoke unrelated skills just because they are available.
+- Keep QuantLab read-only for research. Do not add broker connections, account authentication, or order execution unless the user changes this scope.
