@@ -24,10 +24,15 @@ from quantlab.validation import (
 
 
 def record(**changes: str) -> dict[str, str]:
-    return dict(
-        symbol=INSTRUMENT, timestamp_utc="2026-01-01T00:00:00Z",
-        price="1000.10", source="local-fixture",
-    ) | changes
+    return (
+        dict(
+            symbol=INSTRUMENT,
+            timestamp_utc="2026-01-01T00:00:00Z",
+            price="1000.10",
+            source="local-fixture",
+        )
+        | changes
+    )
 
 
 def csv_text(rows: list[list[str]], header: tuple[str, ...] = REQUIRED_COLUMNS) -> str:
@@ -55,11 +60,15 @@ def test_valid_fixture_preserves_duplicates_and_provenance(fixture_dir: Path) ->
         ticks[0].price = Decimal("1")  # type: ignore[misc]
 
 
-@pytest.mark.parametrize("header", [
-    REQUIRED_COLUMNS[:-1], REQUIRED_COLUMNS + ("extra",),
-    ("symbol", "timestamp_utc", "price", "price"),
-    ("symbol", "timestamp_utc", "price", "Source"),
-])
+@pytest.mark.parametrize(
+    "header",
+    [
+        REQUIRED_COLUMNS[:-1],
+        REQUIRED_COLUMNS + ("extra",),
+        ("symbol", "timestamp_utc", "price", "price"),
+        ("symbol", "timestamp_utc", "price", "Source"),
+    ],
+)
 def test_incorrect_schema(header: tuple[str, ...]) -> None:
     with pytest.raises(ValidationError, match="Row 1: required columns"):
         list(iter_csv_ticks(io.StringIO(csv_text([], header))))
@@ -79,10 +88,25 @@ def test_missing_values(field: str, value: str) -> None:
         parse_tick(record(**{field: value}), 7)
 
 
-@pytest.mark.parametrize("price", [
-    "-1", "0", "-0", "NaN", "sNaN", "Infinity", "-Infinity", "inf",
-    "null", "None", "abc", "1_000", " 1.0", "1.0 ",
-])
+@pytest.mark.parametrize(
+    "price",
+    [
+        "-1",
+        "0",
+        "-0",
+        "NaN",
+        "sNaN",
+        "Infinity",
+        "-Infinity",
+        "inf",
+        "null",
+        "None",
+        "abc",
+        "1_000",
+        " 1.0",
+        "1.0 ",
+    ],
+)
 def test_invalid_prices(price: str) -> None:
     with pytest.raises(ValidationError, match="Row 9: price must be a finite positive decimal"):
         parse_tick(record(price=price), 9)
@@ -94,22 +118,36 @@ def test_decimal_precision_and_exponents() -> None:
     assert parse_tick(record(price="1e-8"), 2).price == Decimal("0.00000001")
 
 
-@pytest.mark.parametrize("timestamp", [
-    "not-a-time", "2026-01-01T00:00:00", "2026-01-01", "2026-02-30T00:00:00Z",
-    "2026-01-01T25:00:00Z", "2026-01-01T00:00:00+24:00",
-    "2026-01-01T00:00:00+00:60", "2026-01-01T00:00:60Z",
-    "2026-01-01T00:00:00.1234567Z", "0001-01-01T00:00:00+01:00",
-    "9999-12-31T23:59:59-01:00",
-])
+@pytest.mark.parametrize(
+    "timestamp",
+    [
+        "not-a-time",
+        "2026-01-01T00:00:00",
+        "2026-01-01",
+        "2026-02-30T00:00:00Z",
+        "2026-01-01T25:00:00Z",
+        "2026-01-01T00:00:00+24:00",
+        "2026-01-01T00:00:00+00:60",
+        "2026-01-01T00:00:60Z",
+        "2026-01-01T00:00:00.1234567Z",
+        "0001-01-01T00:00:00+01:00",
+        "9999-12-31T23:59:59-01:00",
+    ],
+)
 def test_invalid_timestamps(timestamp: str) -> None:
     with pytest.raises(ValidationError, match="Row 4: .*timestamp_utc"):
         parse_tick(record(timestamp_utc=timestamp), 4)
 
 
-@pytest.mark.parametrize("timestamp", [
-    "2026-01-01T02:00:00+02:00", "2025-12-31T19:00:00-05:00",
-    "2026-01-01T05:30:00+05:30", "2026-01-01T00:00:00Z",
-])
+@pytest.mark.parametrize(
+    "timestamp",
+    [
+        "2026-01-01T02:00:00+02:00",
+        "2025-12-31T19:00:00-05:00",
+        "2026-01-01T05:30:00+05:30",
+        "2026-01-01T00:00:00Z",
+    ],
+)
 def test_normalizes_offsets(timestamp: str) -> None:
     assert parse_tick(record(timestamp_utc=timestamp), 2).timestamp_utc == datetime(
         2026, 1, 1, tzinfo=timezone.utc
@@ -174,10 +212,12 @@ def test_cli_summary(fixture_dir: Path, capsys: pytest.CaptureFixture[str]) -> N
     output = capsys.readouterr()
     assert output.err == ""
     for expected in [
-        "Validated records: 4", f"Instrument: {INSTRUMENT}",
+        "Validated records: 4",
+        f"Instrument: {INSTRUMENT}",
         "Earliest timestamp: 2026-01-01T00:00:00+00:00",
         "Latest timestamp: 2026-01-01T00:00:01.123456+00:00",
-        "Minimum price: 999.90", "Maximum price: 1000.20",
+        "Minimum price: 999.90",
+        "Maximum price: 1000.20",
     ]:
         assert expected in output.out
 
@@ -196,6 +236,9 @@ def test_cli_failure(fixture_dir: Path, filename: str, capsys: pytest.CaptureFix
 def test_module_cli(fixture_dir: Path, tmp_path: Path, filename: str, status: int) -> None:
     result = subprocess.run(
         [sys.executable, "-m", "quantlab.validation", str(fixture_dir / filename)],
-        cwd=tmp_path, capture_output=True, text=True, check=False,
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert result.returncode == status, result.stderr

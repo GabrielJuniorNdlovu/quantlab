@@ -1,0 +1,31 @@
+         23200053 function calls (21800049 primitive calls) in 18.432 seconds
+
+   Ordered by: internal time
+   List reduced from 75 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+1500000/100000    3.437    0.000    5.598    0.000 metadata.py:16(_freeze)
+  8000000    1.572    0.000    2.335    0.000 {built-in method builtins.isinstance}
+   100001    1.558    0.000   11.494    0.000 csv_adapter.py:52(iter_csv_candidates)
+   200000    1.032    0.000    2.013    0.000 parsing.py:31(parse_price)
+   100000    0.868    0.000    7.161    0.000 engine.py:49(validate_tick)
+   100000    0.651    0.000    2.773    0.000 models.py:145(__post_init__)
+   500000    0.621    0.000    0.975    0.000 parsing.py:20(required_text)
+   300001    0.620    0.000    0.620    0.000 {method 'fullmatch' of 're.Pattern' objects}
+  3300007    0.620    0.000    0.620    0.000 {built-in method builtins.len}
+   200000    0.571    0.000    1.168    0.000 parsing.py:57(parse_timestamp)
+   100000    0.540    0.000    7.361    0.000 models.py:86(__post_init__)
+   100002    0.482    0.000    0.772    0.000 csv_adapter.py:36(__next__)
+   300000    0.363    0.000    0.621    0.000 {method 'as_tuple' of 'decimal.Decimal' objects}
+   600000    0.351    0.000    0.633    0.000 {built-in method _abc._abc_instancecheck}
+   200000    0.338    0.000    0.457    0.000 parsing.py:97(parse_pip_size)
+   200001    0.326    0.000    0.326    0.000 {method 'hexdigest' of '_hashlib.HASH' objects}
+        1    0.317    0.317   19.341   19.341 validate.py:87(consume)
+   900000    0.310    0.000    0.310    0.000 {method 'encode' of 'str' objects}
+   100001    0.293    0.000   19.024    0.000 engine.py:122(validate_acquisition)
+   100002    0.274    0.000    1.045    0.000 {built-in method builtins.next}
+   600000    0.230    0.000    0.863    0.000 <frozen abc>:117(__instancecheck__)
+   200001    0.227    0.000    0.227    0.000 {built-in method _hashlib.openssl_sha256}
+   100000    0.222    0.000    0.222    0.000 <string>:2(__init__)
+   200000    0.190    0.000    0.190    0.000 {method 'utcoffset' of 'datetime.datetime' objects}
+   100000    0.183    0.000    0.211    0.000 models.py:189(__post_init__)

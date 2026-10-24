@@ -1,0 +1,726 @@
+{
+  "claim": "Observed throughput, rejection overhead, and bounded memory by input size; no speedup or SLO claim.",
+  "measured_at_utc": "2026-10-24T21:06:51.716399+00:00",
+  "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+  "logical_cpus": 12,
+  "load_before": [
+    1.55126953125,
+    1.56787109375,
+    1.56201171875
+  ],
+  "load_after": [
+    2.4951171875,
+    1.873046875,
+    1.6669921875
+  ],
+  "runs": 5,
+  "source_sha256": {
+    "src/quantlab/__init__.py": "a0cff4c062277b1816e464c57e2157d4fbe9585eaf54c33494046b4bf3d8fc77",
+    "src/quantlab/cli.py": "3772ad3a6864f56e416963b7b5ab3a05e27df7fcc65d30f23d5970e2d0f94091",
+    "src/quantlab/csv_adapter.py": "449c17f80a0a7b0b2cf35a923dd0b9a61cf1a4c2a5b8c8ad22d2694c3a1dca00",
+    "src/quantlab/csv_syntax.py": "7fdd81d823883925a3c2ed6d489b56fd52081462b5672a66c337bc105d4b56be",
+    "src/quantlab/engine.py": "ae5e46a366dfbd8fefd9bd467c4e8da899da33255f5a590ea68f16b3eb3a50ec",
+    "src/quantlab/legacy.py": "5267cf049996f95a35ea90e81553803b0415821fffad9a7e8f56a822cff9c1f0",
+    "src/quantlab/metadata.py": "8add3122f7c608f9879d4716248cf8ed44d6d660f00f08c81328a0b3f0ab8391",
+    "src/quantlab/models.py": "5eba7a00edcf31d3d39666933179b87bb542739220c01bc2ac640ef635dc32f5",
+    "src/quantlab/parsing.py": "2cbe099eb6bb62b00aa014b29183497ea780e788e5831e2e737dacc4a9017bac",
+    "src/quantlab/quality.py": "c2994bd72d09c1738cf3f2142ce8216d8413bdf6872572013f7c2aa209961082",
+    "src/quantlab/validation.py": "21c0e5a6bedfd1634694c78921c77c69475782cfb073c05efdf39b7cf95733a3"
+  },
+  "method": "Fresh worker per case. Timings exclude imports/input-file generation. Separate memory tracing. CLI process_seconds includes startup. Interleaved scenarios. OS cache uncontrolled.",
+  "summaries": {
+    "core-valid-10000": {
+      "median_seconds": 0.26047019199904753,
+      "min_seconds": 0.2603889359961613,
+      "max_seconds": 0.26392451399442507,
+      "median_processed_per_second": 38392.10899048505,
+      "median_validated_per_second": 38392.10899048505,
+      "memory": {
+        "seconds": 0.7902920399938012,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 12653.55019908645,
+        "validated_per_second": 12653.55019908645,
+        "tracemalloc_peak_bytes": 14845,
+        "peak_rss_kib": 24724,
+        "process_seconds": 0.9003681960020913
+      }
+    },
+    "core-10pct-reject-10000": {
+      "median_seconds": 0.2770350709979539,
+      "min_seconds": 0.27370024799893145,
+      "max_seconds": 0.287524993000261,
+      "median_processed_per_second": 36096.51284935638,
+      "median_validated_per_second": 32486.861564420746,
+      "memory": {
+        "seconds": 0.8065175660012756,
+        "accepted": 9000,
+        "rejected": 1000,
+        "processed_per_second": 12398.985988092149,
+        "validated_per_second": 11159.087389282933,
+        "tracemalloc_peak_bytes": 14290,
+        "peak_rss_kib": 24696,
+        "process_seconds": 0.9131853729995782
+      }
+    },
+    "csv-valid-10000": {
+      "median_seconds": 0.6152276610009721,
+      "min_seconds": 0.5996752779974486,
+      "max_seconds": 0.6275257650049753,
+      "median_processed_per_second": 16254.145634040662,
+      "median_validated_per_second": 16254.145634040662,
+      "memory": {
+        "seconds": 2.1849543310017907,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 4576.754698307607,
+        "validated_per_second": 4576.754698307607,
+        "tracemalloc_peak_bytes": 163796,
+        "peak_rss_kib": 24744,
+        "process_seconds": 2.294681842002319
+      }
+    },
+    "csv-10pct-reject-10000": {
+      "median_seconds": 0.6229065970037482,
+      "min_seconds": 0.6134566350010573,
+      "max_seconds": 0.64399904399761,
+      "median_processed_per_second": 16053.771220438412,
+      "median_validated_per_second": 14448.39409839457,
+      "memory": {
+        "seconds": 2.192045451993181,
+        "accepted": 9000,
+        "rejected": 1000,
+        "processed_per_second": 4561.949201786491,
+        "validated_per_second": 4105.754281607842,
+        "tracemalloc_peak_bytes": 170094,
+        "peak_rss_kib": 24832,
+        "process_seconds": 2.3031600120011717
+      }
+    },
+    "cli-valid-10000": {
+      "median_seconds": 0.6195241770037683,
+      "min_seconds": 0.6078077119964291,
+      "max_seconds": 0.6641348210032447,
+      "median_processed_per_second": 16141.42009495648,
+      "median_validated_per_second": 16141.42009495648,
+      "memory": {
+        "seconds": 2.2015288080001483,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 4542.298044731889,
+        "validated_per_second": 4542.298044731889,
+        "tracemalloc_peak_bytes": 174734,
+        "peak_rss_kib": 25064,
+        "process_seconds": 2.3080302920061513
+      }
+    },
+    "core-valid-100000": {
+      "median_seconds": 2.5847429190034745,
+      "min_seconds": 2.5276690700047766,
+      "max_seconds": 2.6678971020010067,
+      "median_processed_per_second": 38688.56715489297,
+      "median_validated_per_second": 38688.56715489297,
+      "memory": {
+        "seconds": 7.765469168996788,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 12877.521991748361,
+        "validated_per_second": 12877.521991748361,
+        "tracemalloc_peak_bytes": 11395,
+        "peak_rss_kib": 24568,
+        "process_seconds": 7.875153503002366
+      }
+    },
+    "core-10pct-reject-100000": {
+      "median_seconds": 2.8254088169996976,
+      "min_seconds": 2.8068607070017606,
+      "max_seconds": 2.889793352005654,
+      "median_processed_per_second": 35393.108210864164,
+      "median_validated_per_second": 31853.79738977775,
+      "memory": {
+        "seconds": 8.928029636997962,
+        "accepted": 90000,
+        "rejected": 10000,
+        "processed_per_second": 11200.67966459225,
+        "validated_per_second": 10080.611698133025,
+        "tracemalloc_peak_bytes": 15140,
+        "peak_rss_kib": 24664,
+        "process_seconds": 9.042352167001809
+      }
+    },
+    "csv-valid-100000": {
+      "median_seconds": 6.253858928997943,
+      "min_seconds": 6.096129996003583,
+      "max_seconds": 6.297219567000866,
+      "median_processed_per_second": 15990.127237491592,
+      "median_validated_per_second": 15990.127237491592,
+      "memory": {
+        "seconds": 22.21883062300185,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 4500.686903678715,
+        "validated_per_second": 4500.686903678715,
+        "tracemalloc_peak_bytes": 168098,
+        "peak_rss_kib": 24748,
+        "process_seconds": 22.347120597005414
+      }
+    },
+    "csv-10pct-reject-100000": {
+      "median_seconds": 6.272172893004608,
+      "min_seconds": 6.231980518998171,
+      "max_seconds": 6.5619413099993835,
+      "median_processed_per_second": 15943.43805661521,
+      "median_validated_per_second": 14349.09425095369,
+      "memory": {
+        "seconds": 23.297521899003186,
+        "accepted": 90000,
+        "rejected": 10000,
+        "processed_per_second": 4292.302006776035,
+        "validated_per_second": 3863.0718060984314,
+        "tracemalloc_peak_bytes": 165646,
+        "peak_rss_kib": 24820,
+        "process_seconds": 23.4102028480047
+      }
+    },
+    "cli-valid-100000": {
+      "median_seconds": 6.203529505000915,
+      "min_seconds": 6.0556011219960055,
+      "max_seconds": 6.385948677998385,
+      "median_processed_per_second": 16119.855627249934,
+      "median_validated_per_second": 16119.855627249934,
+      "memory": {
+        "seconds": 22.78413644900138,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 4389.018658830186,
+        "validated_per_second": 4389.018658830186,
+        "tracemalloc_peak_bytes": 172038,
+        "peak_rss_kib": 24848,
+        "process_seconds": 22.89866338599677
+      }
+    }
+  },
+  "trials": {
+    "core-valid-10000": [
+      {
+        "seconds": 0.2603889359961613,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 38404.08948922247,
+        "validated_per_second": 38404.08948922247,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24572,
+        "process_seconds": 0.369868289999431
+      },
+      {
+        "seconds": 0.26392451399442507,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 37889.621728018916,
+        "validated_per_second": 37889.621728018916,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24608,
+        "process_seconds": 0.3723275860029389
+      },
+      {
+        "seconds": 0.2637097080005333,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 37920.48489917473,
+        "validated_per_second": 37920.48489917473,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24504,
+        "process_seconds": 0.37713362499926006
+      },
+      {
+        "seconds": 0.2604350239998894,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 38397.29329187401,
+        "validated_per_second": 38397.29329187401,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24552,
+        "process_seconds": 0.37033966899616644
+      },
+      {
+        "seconds": 0.26047019199904753,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 38392.10899048505,
+        "validated_per_second": 38392.10899048505,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24600,
+        "process_seconds": 0.3686144869934651
+      }
+    ],
+    "core-10pct-reject-10000": [
+      {
+        "seconds": 0.28724162499565864,
+        "accepted": 9000,
+        "rejected": 1000,
+        "processed_per_second": 34813.89579296225,
+        "validated_per_second": 31332.506213666024,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24640,
+        "process_seconds": 0.39787590900232317
+      },
+      {
+        "seconds": 0.2770350709979539,
+        "accepted": 9000,
+        "rejected": 1000,
+        "processed_per_second": 36096.51284935638,
+        "validated_per_second": 32486.861564420746,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24500,
+        "process_seconds": 0.3850569380010711
+      },
+      {
+        "seconds": 0.287524993000261,
+        "accepted": 9000,
+        "rejected": 1000,
+        "processed_per_second": 34779.5852306687,
+        "validated_per_second": 31301.62670760183,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24460,
+        "process_seconds": 0.3976765580009669
+      },
+      {
+        "seconds": 0.27370024799893145,
+        "accepted": 9000,
+        "rejected": 1000,
+        "processed_per_second": 36536.320566428716,
+        "validated_per_second": 32882.68850978585,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24492,
+        "process_seconds": 0.3808259799989173
+      },
+      {
+        "seconds": 0.2760708100031479,
+        "accepted": 9000,
+        "rejected": 1000,
+        "processed_per_second": 36222.590863141144,
+        "validated_per_second": 32600.331776827028,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24636,
+        "process_seconds": 0.38420167099684477
+      }
+    ],
+    "csv-valid-10000": [
+      {
+        "seconds": 0.6229669450040092,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 16052.216060894922,
+        "validated_per_second": 16052.216060894922,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24580,
+        "process_seconds": 0.7319231109941029
+      },
+      {
+        "seconds": 0.6152276610009721,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 16254.145634040662,
+        "validated_per_second": 16254.145634040662,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24588,
+        "process_seconds": 0.7220526789969881
+      },
+      {
+        "seconds": 0.5996752779974486,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 16675.69160662072,
+        "validated_per_second": 16675.69160662072,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24596,
+        "process_seconds": 0.7075202199994237
+      },
+      {
+        "seconds": 0.6275257650049753,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 15935.600667999212,
+        "validated_per_second": 15935.600667999212,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24584,
+        "process_seconds": 0.7367666629943415
+      },
+      {
+        "seconds": 0.6025879910012009,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 16595.08677460529,
+        "validated_per_second": 16595.08677460529,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24572,
+        "process_seconds": 0.7106410900014453
+      }
+    ],
+    "csv-10pct-reject-10000": [
+      {
+        "seconds": 0.64399904399761,
+        "accepted": 9000,
+        "rejected": 1000,
+        "processed_per_second": 15527.973361459077,
+        "validated_per_second": 13975.176025313169,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24648,
+        "process_seconds": 0.7540905510031735
+      },
+      {
+        "seconds": 0.6244717090012273,
+        "accepted": 9000,
+        "rejected": 1000,
+        "processed_per_second": 16013.53569082238,
+        "validated_per_second": 14412.182121740141,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24640,
+        "process_seconds": 0.7319941019959515
+      },
+      {
+        "seconds": 0.6229065970037482,
+        "accepted": 9000,
+        "rejected": 1000,
+        "processed_per_second": 16053.771220438412,
+        "validated_per_second": 14448.39409839457,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24556,
+        "process_seconds": 0.7297500330023468
+      },
+      {
+        "seconds": 0.6170456940017175,
+        "accepted": 9000,
+        "rejected": 1000,
+        "processed_per_second": 16206.255220982332,
+        "validated_per_second": 14585.629698884099,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24628,
+        "process_seconds": 0.7247146250010701
+      },
+      {
+        "seconds": 0.6134566350010573,
+        "accepted": 9000,
+        "rejected": 1000,
+        "processed_per_second": 16301.070734988081,
+        "validated_per_second": 14670.963661489273,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24556,
+        "process_seconds": 0.7206602779988316
+      }
+    ],
+    "cli-valid-10000": [
+      {
+        "seconds": 0.6641348210032447,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 15057.183697873212,
+        "validated_per_second": 15057.183697873212,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24756,
+        "process_seconds": 0.7840721669999766
+      },
+      {
+        "seconds": 0.6171839559974615,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 16202.624683978549,
+        "validated_per_second": 16202.624683978549,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24724,
+        "process_seconds": 0.7252595490062959
+      },
+      {
+        "seconds": 0.6244910349996644,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 16013.040123154648,
+        "validated_per_second": 16013.040123154648,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24760,
+        "process_seconds": 0.7324902399996063
+      },
+      {
+        "seconds": 0.6195241770037683,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 16141.42009495648,
+        "validated_per_second": 16141.42009495648,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24824,
+        "process_seconds": 0.729145443001471
+      },
+      {
+        "seconds": 0.6078077119964291,
+        "accepted": 10000,
+        "rejected": 0,
+        "processed_per_second": 16452.57176345066,
+        "validated_per_second": 16452.57176345066,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24796,
+        "process_seconds": 0.715104668001004
+      }
+    ],
+    "core-valid-100000": [
+      {
+        "seconds": 2.5659909509995487,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 38971.298772915114,
+        "validated_per_second": 38971.298772915114,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24632,
+        "process_seconds": 2.6803283900007955
+      },
+      {
+        "seconds": 2.5847429190034745,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 38688.56715489297,
+        "validated_per_second": 38688.56715489297,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24592,
+        "process_seconds": 2.691179203997308
+      },
+      {
+        "seconds": 2.595316377002746,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 38530.94785903792,
+        "validated_per_second": 38530.94785903792,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24576,
+        "process_seconds": 2.70242283600237
+      },
+      {
+        "seconds": 2.6678971020010067,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 37482.70498326073,
+        "validated_per_second": 37482.70498326073,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24604,
+        "process_seconds": 2.7752360009981203
+      },
+      {
+        "seconds": 2.5276690700047766,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 39562.14094110469,
+        "validated_per_second": 39562.14094110469,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24588,
+        "process_seconds": 2.635359165004047
+      }
+    ],
+    "core-10pct-reject-100000": [
+      {
+        "seconds": 2.8254088169996976,
+        "accepted": 90000,
+        "rejected": 10000,
+        "processed_per_second": 35393.108210864164,
+        "validated_per_second": 31853.79738977775,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24448,
+        "process_seconds": 2.932509988997481
+      },
+      {
+        "seconds": 2.889793352005654,
+        "accepted": 90000,
+        "rejected": 10000,
+        "processed_per_second": 34604.550505521525,
+        "validated_per_second": 31144.095454969374,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24488,
+        "process_seconds": 2.9980011459992966
+      },
+      {
+        "seconds": 2.8464393059985014,
+        "accepted": 90000,
+        "rejected": 10000,
+        "processed_per_second": 35131.6115503545,
+        "validated_per_second": 31618.45039531905,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24516,
+        "process_seconds": 2.9561207170045236
+      },
+      {
+        "seconds": 2.8248638810036937,
+        "accepted": 90000,
+        "rejected": 10000,
+        "processed_per_second": 35399.93578893058,
+        "validated_per_second": 31859.942210037523,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24504,
+        "process_seconds": 2.9348600289958995
+      },
+      {
+        "seconds": 2.8068607070017606,
+        "accepted": 90000,
+        "rejected": 10000,
+        "processed_per_second": 35626.990591499016,
+        "validated_per_second": 32064.291532349114,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24636,
+        "process_seconds": 2.9163228570032516
+      }
+    ],
+    "csv-valid-100000": [
+      {
+        "seconds": 6.235102624996216,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 16038.228400460479,
+        "validated_per_second": 16038.228400460479,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24584,
+        "process_seconds": 6.343795782006055
+      },
+      {
+        "seconds": 6.2619038299962995,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 15969.584125673022,
+        "validated_per_second": 15969.584125673022,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24656,
+        "process_seconds": 6.372196068994526
+      },
+      {
+        "seconds": 6.297219567000866,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 15880.024340270276,
+        "validated_per_second": 15880.024340270276,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24632,
+        "process_seconds": 6.405900853998901
+      },
+      {
+        "seconds": 6.253858928997943,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 15990.127237491592,
+        "validated_per_second": 15990.127237491592,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24652,
+        "process_seconds": 6.364778545997979
+      },
+      {
+        "seconds": 6.096129996003583,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 16403.84966619095,
+        "validated_per_second": 16403.84966619095,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24488,
+        "process_seconds": 6.203558221001003
+      }
+    ],
+    "csv-10pct-reject-100000": [
+      {
+        "seconds": 6.272172893004608,
+        "accepted": 90000,
+        "rejected": 10000,
+        "processed_per_second": 15943.43805661521,
+        "validated_per_second": 14349.09425095369,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24596,
+        "process_seconds": 6.3813287319935625
+      },
+      {
+        "seconds": 6.231980518998171,
+        "accepted": 90000,
+        "rejected": 10000,
+        "processed_per_second": 16046.263253736168,
+        "validated_per_second": 14441.636928362552,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24632,
+        "process_seconds": 6.3395971869977075
+      },
+      {
+        "seconds": 6.5619413099993835,
+        "accepted": 90000,
+        "rejected": 10000,
+        "processed_per_second": 15239.392624194226,
+        "validated_per_second": 13715.453361774804,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24584,
+        "process_seconds": 6.671359353997104
+      },
+      {
+        "seconds": 6.238736125997093,
+        "accepted": 90000,
+        "rejected": 10000,
+        "processed_per_second": 16028.887579215847,
+        "validated_per_second": 14425.998821294263,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24544,
+        "process_seconds": 6.349924473994179
+      },
+      {
+        "seconds": 6.523281165005756,
+        "accepted": 90000,
+        "rejected": 10000,
+        "processed_per_second": 15329.708695748326,
+        "validated_per_second": 13796.737826173494,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24732,
+        "process_seconds": 6.634767086005013
+      }
+    ],
+    "cli-valid-100000": [
+      {
+        "seconds": 6.097791079002491,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 16399.381137268898,
+        "validated_per_second": 16399.381137268898,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24792,
+        "process_seconds": 6.205516608002654
+      },
+      {
+        "seconds": 6.203529505000915,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 16119.855627249934,
+        "validated_per_second": 16119.855627249934,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24768,
+        "process_seconds": 6.311184278994915
+      },
+      {
+        "seconds": 6.0556011219960055,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 16513.637207174354,
+        "validated_per_second": 16513.637207174354,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24776,
+        "process_seconds": 6.162992932004272
+      },
+      {
+        "seconds": 6.212724971999705,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 16095.996595808225,
+        "validated_per_second": 16095.996595808225,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24884,
+        "process_seconds": 6.320846807997441
+      },
+      {
+        "seconds": 6.385948677998385,
+        "accepted": 100000,
+        "rejected": 0,
+        "processed_per_second": 15659.380468329107,
+        "validated_per_second": 15659.380468329107,
+        "tracemalloc_peak_bytes": null,
+        "peak_rss_kib": 24768,
+        "process_seconds": 6.496632906993909
+      }
+    ]
+  }
+}

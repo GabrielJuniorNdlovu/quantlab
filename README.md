@@ -1,113 +1,150 @@
 # QuantLab
 
-QuantLab is a Python platform for offline quantitative research. Feature 01, the
-Market Data Integrity Engine, validates local historical tick CSV files before
-later research into price behavior, spike events, and prediction replay.
-Boom 1000 Index is the sole instrument to keep the first milestone's data
-contract precise. Its canonical name is not a broker API symbol.
+QuantLab validates local historical data for offline research on Boom 1000 Index.
+Feature 01 separates exact source evidence from canonical `market_tick.v1` ticks
+and structured quality events. The single-instrument scope keeps the data
+contract precise before later research and chart replay.
 
-This is an initial implementation, not a production-ready data service. The
-fixtures are small deterministic examples, not published market history. There
-are no broker connections, credentials, accounts, or trading functionality.
+The implementation supports local CSV files. It requires no market credentials
+or network connection at runtime. The supplied fixtures are deterministic
+engineering examples, not published market observations.
 
-## Setup and commands
+## Set up the environment
 
-From this project directory, use Python 3.11 or newer:
+Use Python 3.11 or newer from the existing project directory:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e '.[dev]'
-python -m pytest -q
-python -m quantlab.validation data/fixtures/valid_ticks.csv
+python -m pip install -r requirements-dev.lock
+python -m pip install --no-build-isolation --no-deps -e .
 ```
 
-On Ubuntu, creating an environment requires Python's venv support, typically
-provided by `python3-venv`. Installing dependencies may require a package index
-or local package cache. Validation and tests require no network or credentials.
-There are no runtime dependencies; pytest is a development extra.
+On Ubuntu, install the OS `python3-venv` package if environment creation fails.
+Dependency installation needs a package index or an available local cache.
+Validation and tests run offline. Runtime dependencies are standard-library only.
+`requirements-dev.lock` records the tested development-tool versions. The
+project's development extra declares the supported tool set.
 
-The valid example prints four records, the instrument, UTC timestamp bounds,
-and minimum/maximum prices of 999.90 and 1000.20. To see rejection:
+GitHub Actions runs the checks on Python 3.11 and 3.14 when the branch is pushed.
+Local verification used Python 3.14.4. Hosted CI still needs its first run.
+
+## Validate the legacy CSV fixtures
+
+The original four-column format remains available through an explicitly named
+legacy adapter:
 
 ```bash
+python -m quantlab.validation data/fixtures/valid_ticks.csv
 python -m quantlab.validation data/fixtures/invalid_ticks.csv
 ```
 
-This exits with status 1 and reports a non-finite price on physical line 3.
-Errors go to stderr; a successful summary goes to stdout, only after the entire
-file passes validation.
+The valid fixture reports four observations and prices from 999.90 to 1000.20.
+Its report marks the result as limited fidelity. The invalid fixture exits with
+status 1 and identifies physical line 3. Errors go to stderr. Success summaries
+appear only after the entire input passes.
 
-## CSV contract
+Legacy data does not contain a verified provider symbol, provider quote
+precision, or acquisition identity. It produces `LegacyTick`, never
+`MarketTick`. The old `Tick` name remains an alias for `LegacyTick`.
 
-Use UTF-8 CSV with exactly these column names, in any order:
+## Validate the canonical fixture
+
+Provide an acquisition UUID, provider label, reviewed symbol mapping, and quote
+precision explicitly:
+
+```bash
+python -m quantlab.validation data/fixtures/canonical_ticks.csv \
+	--format canonical \
+	--capture-id 11111111-1111-4111-8111-111111111111 \
+	--provider fixture-provider \
+	--provider-symbol fixture-symbol \
+	--pip-size 2
+```
+
+The report identifies `market_tick.v1` and the internal instrument `BOOM_1000`.
+`fixture-symbol` is test configuration. It is not a Deriv symbol or a claim that
+an actual provider mapping has been verified. Review real source documentation
+before supplying provider configuration for an authorized dataset.
+
+Each canonical CSV contains these required columns, in any order:
 
 ```csv
-symbol,timestamp_utc,price,source
-Boom 1000 Index,2026-01-01T00:00:00Z,1000.10,local-observations
+instrument_id,provider_symbol,event_time_utc,price,pip_size
+BOOM_1000,fixture-symbol,2026-01-01T00:00:00Z,1000.10,2
 ```
 
-- `symbol` must equal `Boom 1000 Index` exactly. `INSTRUMENT` in `models.py`
-  centralizes this identifier. Broker-specific mapping is deferred until verified.
-- `timestamp_utc` accepts ISO 8601 extended form
-  `YYYY-MM-DDTHH:MM:SS[.ffffff]Z` or an explicit `±HH:MM` offset. Fractional
-  seconds may have one to six digits. Valid values normalize to aware UTC
-  datetimes. Local times without offsets, dates without times, leap seconds,
-  and precision exceeding microseconds are rejected instead of silently changed.
-- `price` must be a finite, strictly positive decimal number. Scientific notation
-  is accepted. `Decimal` conversion is direct, with no intermediate floats or
-  rounding. No tick size or instrument price scale is assumed.
-- `source` is required and nonblank. Its value is retained exactly as supplied;
-  this label is not verified evidence of authenticity.
+`provider_tick_id` is an optional column. Missing required columns, duplicate
+headers, unexpected columns, blank records, malformed input, and empty datasets
+are errors. Canonical CSV supports UTF-8 with LF or CRLF line endings.
 
-Rows must have non-decreasing UTC timestamps. Identical timestamps and prices
-are legitimate ticks and are preserved. No deduplication, sorting, trimming,
-interpolation, or record skipping occurs. Missing/extra fields, duplicate header
-names, blank records, invalid CSV, and empty datasets are errors. Quoted multiline
-fields are supported: `source_row` identifies the starting physical line, counting
-the header. Input files are opened read-only and never rewritten.
+## Consume validated observations incrementally
 
-## Architecture and Python API
-
-The installable `src/` package separates frozen, slotted `Tick` records from
-validation and file I/O. `Tick` is a typed container; use the validator to
-establish invariants rather than directly constructing unvalidated records.
+Use the binary CSV adapter with the source-independent engine:
 
 ```python
-from quantlab.validation import load_ticks
+from pathlib import Path
+from uuid import UUID
 
-ticks = load_ticks("data/fixtures/valid_ticks.csv")
+from quantlab.csv_adapter import iter_csv_candidates
+from quantlab.engine import validate_acquisition
+from quantlab.models import AcquisitionContext, SourceType
+
+context = AcquisitionContext(
+	capture_id=UUID("11111111-1111-4111-8111-111111111111"),
+	provider="fixture-provider",
+	source_type=SourceType.HISTORICAL_CSV,
+	provider_symbol="fixture-symbol",
+	pip_size=2,
+)
+with Path("data/fixtures/canonical_ticks.csv").open("rb") as stream:
+	for outcome in validate_acquisition(iter_csv_candidates(stream, context), context):
+		if outcome.tick is None:
+			print(outcome.events[0].error_code.value)
+		else:
+			print(outcome.tick.event_time_utc, outcome.tick.price)
 ```
 
-`parse_tick(record, source_row)` validates one mapping. `validate_records` adds
-ordering and nonempty-dataset checks to an iterable of numbered mappings.
-`iter_csv_ticks(stream)` checks CSV structure and reuses these rules.
-`load_ticks(path)` owns file I/O and returns a fully validated list or raises
-`ValidationError` (with `.row`) or an OS file-access error.
+A domain rejection produces an outcome with structured errors and no tick.
+Malformed transport input raises `QualityError` with its structured `.event`.
+Consumers must inspect every outcome and exhaust the iterator successfully
+before accepting a complete dataset. Early ticks remain provisional.
 
-Validation takes O(n) time with O(1) auxiliary state relative to record count,
-plus the current CSV record. The list-returning loader and CLI use O(n) memory.
-Iterator consumers can process future chunks without rewriting the rules, but
-early yields remain provisional: exhaust the iterator successfully before
-accepting a dataset or committing downstream results.
+The engine and CLI keep constant state relative to record count, plus the
+bounded current record. The legacy `load_ticks` convenience function still
+returns a list and therefore uses O(n) memory. Source bytes remain in memory
+only while referenced by a result. This feature does not archive data durably.
 
-## Verification and remaining limitations
+## Run the engineering checks
 
-The offline tests cover schema and field checks, exact prices, UTC conversion,
-ordering, duplicates, provenance, physical line reporting, immutability, input
-preservation, CSV/encoding errors, and CLI summaries and exit codes. CLI tests
-also invoke the installed package from outside the project directory.
+```bash
+python -m pytest -q
+python -m pytest --cov=quantlab --cov-branch --cov-report=term-missing
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy
+.venv/bin/python -m benchmarks.validate --sizes 10000 100000 --runs 5
+```
 
-- **Major operational limitation:** the loader materializes the file; bounded
-  ingestion, transactional persistence, metrics, and recovery controls are not
-  implemented. Iterator consumers need explicit commit handling.
-- **Minor limitation:** timestamps have microsecond precision. CSV field sizes
-  use Python's default parser limit; higher precision and resource budgets need
-  a separately specified contract.
-- **Minor limitation:** cadence, gaps, completeness, spike plausibility, tick
-  sizes, source authenticity, and cross-file consistency are not checked.
-  Passing validation establishes structural integrity, not market truth.
+Hypothesis tests use deterministic settings and no persistent example database.
+Benchmarks create deterministic engineering input, fully consume results, and
+check accepted and rejected counts. They are separate from market research.
+See [measured benchmark results](benchmarks/results.md) for the environment,
+measurement method, run counts, and remaining uncertainty.
 
-Suggested next feature: a read-only quality report for gaps and sampling cadence,
-after verifying the expected observation cadence from data documentation.
-No later milestone is implemented here.
+## Read the contract and design decisions
+
+The [market-data contract reference](docs/architecture/market-data-contract.md)
+defines fields, invariants, precision, ordering, errors, bounds, and compatibility.
+[ADR-008](docs/architecture/adr-008-canonical-data-contract.md) records the audit,
+architecture alternatives, and selected ownership boundaries.
+
+Current limits include microsecond timestamp resolution, explicit input-size
+caps, caller responsibility for provider mapping authenticity, and no durable
+raw archive. Passing validation establishes the documented data contract; it
+does not establish source authenticity, complete market coverage, or predictive
+ability.
+
+Feature 02 can consume these outcomes for offline arrow replay after successful
+validation. No broker connection, account authentication, trading, database,
+forecast model, or chart integration is implemented by Feature 01.

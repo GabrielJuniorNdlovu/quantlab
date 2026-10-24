@@ -1,0 +1,11 @@
+{
+  "count": 100000,
+  "accepted": 100000,
+  "rejected": 0,
+  "seconds": 6.145755283003382,
+  "cpu_seconds": 6.145433494,
+  "cpu_to_wall_ratio": 0.9999476404463626,
+  "input_bytes": 5600060,
+  "python": "3.14.4",
+  "method": "Separate diagnostic run of full CSV validation with process_time/perf_counter, after file generation; excluded from throughput trials."
+}
