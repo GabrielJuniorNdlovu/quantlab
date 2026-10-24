@@ -26,3 +26,11 @@ jobs:
       - run: python -m ruff format --check .
       - run: python -m mypy
       - run: python -m pytest --cov=quantlab --cov-branch --cov-report=term-missing
+      - name: Install virtual display for native chart checks
+        if: matrix.python-version == '3.14'
+        run: sudo apt-get update && sudo apt-get install -y xvfb python3-tk
+      - name: Exercise the actual offline chart
+        if: matrix.python-version == '3.14'
+        env:
+          QUANTLAB_GUI_TEST: '1'
+        run: xvfb-run -a python -m pytest -q tests/test_chart.py tests/test_replay_gui.py

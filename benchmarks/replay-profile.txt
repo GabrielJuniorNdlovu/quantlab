@@ -1,0 +1,150 @@
+
+replay_ticks (independent diagnostic, excluded from timings)
+         390 function calls in 0.000 seconds
+
+   Ordered by: internal time
+   List reduced from 22 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       35    0.000    0.000    0.000    0.000 replay.py:132(step)
+       34    0.000    0.000    0.000    0.000 replay.py:19(check_tick_order)
+       35    0.000    0.000    0.000    0.000 replay.py:99(_next)
+        1    0.000    0.000    0.000    0.000 replay.py:77(replay)
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+       34    0.000    0.000    0.000    0.000 replay.py:123(_offset_us)
+       33    0.000    0.000    0.000    0.000 uuid.py:291(__eq__)
+       68    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+        1    0.000    0.000    0.000    0.000 replay.py:39(_positive_speed)
+       34    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+       35    0.000    0.000    0.000    0.000 {built-in method builtins.next}
+       35    0.000    0.000    0.000    0.000 replay.py:89(pause)
+       34    0.000    0.000    0.000    0.000 replay.py:128(_consume)
+        1    0.000    0.000    0.000    0.000 replay.py:53(__init__)
+        1    0.000    0.000    0.000    0.000 replay.py:93(_release_source)
+
+
+
+candle_ticks (independent diagnostic, excluded from timings)
+         3353 function calls in 0.002 seconds
+
+   Ordered by: internal time
+   List reduced from 33 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      176    0.001    0.000    0.001    0.000 parsing.py:31(parse_price)
+       44    0.000    0.000    0.002    0.000 candles.py:23(__post_init__)
+       33    0.000    0.000    0.001    0.000 dataclasses.py:1773(_replace)
+      176    0.000    0.000    0.000    0.000 {method 'as_tuple' of 'decimal.Decimal' objects}
+      859    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+       44    0.000    0.000    0.002    0.000 <string>:2(__init__)
+       34    0.000    0.000    0.002    0.000 candles.py:52(consume)
+       44    0.000    0.000    0.000    0.000 parsing.py:57(parse_timestamp)
+      176    0.000    0.000    0.000    0.000 <string>:1(<lambda>)
+      176    0.000    0.000    0.000    0.000 {built-in method _abc._abc_instancecheck}
+      176    0.000    0.000    0.000    0.000 <frozen abc>:117(__instancecheck__)
+       33    0.000    0.000    0.002    0.000 dataclasses.py:1754(replace)
+       34    0.000    0.000    0.000    0.000 replay.py:19(check_tick_order)
+      176    0.000    0.000    0.000    0.000 {built-in method __new__ of type object at 0xa99760}
+      195    0.000    0.000    0.000    0.000 {built-in method builtins.getattr}
+
+
+
+alert_ticks (independent diagnostic, excluded from timings)
+         495 function calls in 0.001 seconds
+
+   Ordered by: internal time
+   List reduced from 50 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       34    0.000    0.000    0.000    0.000 alerts.py:146(consume)
+        3    0.000    0.000    0.000    0.000 alerts.py:86(__post_init__)
+        1    0.000    0.000    0.001    0.001 replay.py:91(lifecycle)
+        3    0.000    0.000    0.000    0.000 dataclasses.py:1773(_replace)
+       15    0.000    0.000    0.000    0.000 parsing.py:57(parse_timestamp)
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+        3    0.000    0.000    0.000    0.000 parsing.py:31(parse_price)
+        1    0.000    0.000    0.000    0.000 alerts.py:117(__init__)
+        3    0.000    0.000    0.000    0.000 alerts.py:35(__post_init__)
+       37    0.000    0.000    0.000    0.000 {method 'replace' of 'datetime.datetime' objects}
+       60    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+       69    0.000    0.000    0.000    0.000 {method 'extend' of 'list' objects}
+        6    0.000    0.000    0.000    0.000 parsing.py:20(required_text)
+       15    0.000    0.000    0.000    0.000 {method 'utcoffset' of 'datetime.datetime' objects}
+        3    0.000    0.000    0.000    0.000 alerts.py:63(__post_init__)
+
+
+
+chart_geometry_updates (independent diagnostic, excluded from timings)
+         8658 function calls in 0.007 seconds
+
+   Ordered by: internal time
+   List reduced from 24 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       34    0.001    0.000    0.006    0.000 chart.py:79(chart_geometry)
+     1679    0.001    0.000    0.001    0.000 chart.py:72(_display_price)
+      233    0.001    0.000    0.003    0.000 chart.py:125(<genexpr>)
+      199    0.001    0.000    0.001    0.000 {method 'strftime' of 'datetime.date' objects}
+     1251    0.001    0.000    0.002    0.000 chart.py:122(y_at)
+      199    0.000    0.000    0.000    0.000 <string>:2(__init__)
+      233    0.000    0.000    0.001    0.000 chart.py:141(<genexpr>)
+     1679    0.000    0.000    0.000    0.000 {built-in method math.isfinite}
+        1    0.000    0.000    0.007    0.007 replay.py:100(geometry)
+      256    0.000    0.000    0.000    0.000 chart.py:108(x_at)
+      733    0.000    0.000    0.000    0.000 {built-in method builtins.max}
+      290    0.000    0.000    0.000    0.000 {method 'total_seconds' of 'datetime.timedelta' objects}
+      432    0.000    0.000    0.000    0.000 {built-in method builtins.min}
+       91    0.000    0.000    0.000    0.000 chart.py:137(<genexpr>)
+      204    0.000    0.000    0.000    0.000 chart.py:138(<genexpr>)
+
+
+
+tk_canvas_updates (independent diagnostic, excluded from timings)
+         36083 function calls in 0.275 seconds
+
+   Ordered by: internal time
+   List reduced from 55 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+     1289    0.240    0.000    0.240    0.000 {method 'call' of '_tkinter.tkapp' objects}
+     1085    0.006    0.000    0.014    0.000 __init__.py:1655(_options)
+     1085    0.004    0.000    0.220    0.000 __init__.py:3002(_create)
+       34    0.004    0.000    0.242    0.007 chart.py:149(draw_chart)
+     8510    0.002    0.000    0.002    0.000 {built-in method builtins.isinstance}
+     1085    0.002    0.000    0.004    0.000 __init__.py:109(_cnfmerge)
+       34    0.002    0.000    0.009    0.000 chart.py:79(chart_geometry)
+     1679    0.001    0.000    0.002    0.000 chart.py:72(_display_price)
+      199    0.001    0.000    0.001    0.000 {method 'strftime' of 'datetime.date' objects}
+      518    0.001    0.000    0.002    0.000 __init__.py:66(_stringify)
+      233    0.001    0.000    0.003    0.000 chart.py:125(<genexpr>)
+     2170    0.001    0.000    0.001    0.000 {built-in method _tkinter._flatten}
+     2170    0.001    0.000    0.001    0.000 {method 'update' of 'dict' objects}
+     1036    0.001    0.000    0.001    0.000 {method 'search' of 're.Pattern' objects}
+     1251    0.001    0.000    0.002    0.000 chart.py:122(y_at)
+
+
+
+integrated_ticks (independent diagnostic, excluded from timings)
+         26833 function calls (26187 primitive calls) in 1.351 seconds
+
+   Ordered by: internal time
+   List reduced from 260 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       11    1.320    0.120    1.320    0.120 {built-in method posix.fsync}
+       35    0.002    0.000    0.009    0.000 chart.py:79(chart_geometry)
+     1769    0.001    0.000    0.002    0.000 chart.py:72(_display_price)
+   510/34    0.001    0.000    0.002    0.000 metadata.py:16(_freeze)
+      210    0.001    0.000    0.001    0.000 {method 'strftime' of 'datetime.date' objects}
+      250    0.001    0.000    0.002    0.000 parsing.py:31(parse_price)
+     4882    0.001    0.000    0.002    0.000 {built-in method builtins.isinstance}
+      245    0.001    0.000    0.004    0.000 chart.py:125(<genexpr>)
+       33    0.001    0.000    0.001    0.000 encoder.py:207(iterencode)
+      220    0.001    0.000    0.002    0.000 parsing.py:57(parse_timestamp)
+       35    0.001    0.000    0.005    0.000 csv_adapter.py:52(iter_csv_candidates)
+      107    0.001    0.000    0.003    0.000 dataclasses.py:1773(_replace)
+     1320    0.001    0.000    0.002    0.000 chart.py:122(y_at)
+      156    0.000    0.000    0.000    0.000 {method 'fullmatch' of 're.Pattern' objects}
+      210    0.000    0.000    0.000    0.000 <string>:2(__init__)
+
+
