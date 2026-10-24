@@ -3,7 +3,8 @@
 QuantLab validates local historical data for offline research on Boom 1000 Index.
 Feature 01 separates exact source evidence from canonical `market_tick.v1` ticks
 and structured quality events. The single-instrument scope keeps the data
-contract precise before later research and chart replay.
+contract precise. Feature 02 adds deterministic offline replay, M1 candlesticks,
+fixed fixture-alert arrows, and an independently inspectable audit log.
 
 The implementation supports local CSV files. It requires no market credentials
 or network connection at runtime. The supplied fixtures are deterministic
@@ -27,7 +28,45 @@ Validation and tests run offline. Runtime dependencies are standard-library only
 project's development extra declares the supported tool set.
 
 GitHub Actions runs the checks on Python 3.11 and 3.14 when the branch is pushed.
-Local verification used Python 3.14.4. Hosted CI still needs its first run.
+Local verification used Python 3.14.4. Hosted CI for Feature 02 runs after your manual push.
+
+## Run the arrow replay
+
+```bash
+python -m quantlab.replay_app --fixture demo
+```
+
+The application starts paused before the first tick. Click **Step forward** three
+times to reach source position 4: a gold UP arrow appears at 00:00:20 UTC before
+the constructed upward event. Click **Play**, **Pause**, or **Reset run**; change
+replay speed to control presentation timing. Reset creates a separate audit file.
+
+The desktop chart uses Tkinter, with no browser or network service. On Ubuntu,
+install `python3-tk` if your Python lacks Tk support. A graphical display is
+required for the window. The test fixture has 34 observations, a missing-minute
+gap, equal timestamps, and three retained alerts. It demonstrates one constructed
+event outcome, one unsuccessful window, and one unevaluated expiry. These are
+predetermined test alerts and provide no evidence of forecasting accuracy.
+
+Run without a display:
+
+```bash
+python -m quantlab.replay_app --fixture demo --headless
+python -m quantlab.replay_app --inspect-audit replay-runs/RUN_UUID.jsonl
+```
+
+The headless command reports the new audit path, 34 observations, three issued
+alerts, and outcomes `[true, false, null]`. It verifies chart geometry; it does
+not draw a native window. Audit files use exclusive creation and are never
+overwritten by reset. Keep `replay-runs/` when preserving research evidence;
+Git ignores this generated directory.
+
+See the [Feature 02 guide](docs/features/feature-02.md),
+[replay architecture](docs/architecture/replay-engine.md),
+[verification evidence](docs/verification/feature-02.md), and
+[actual desktop capture](docs/features/replay-issued.png).
+The [MT5 prototype](integrations/mt5/README.md) remains uncompiled and unverified
+in a native terminal.
 
 ## Validate the legacy CSV fixtures
 
@@ -123,8 +162,19 @@ python -m pytest --cov=quantlab --cov-branch --cov-report=term-missing
 python -m ruff check .
 python -m ruff format --check .
 python -m mypy
+python -m benchmarks.replay
 .venv/bin/python -m benchmarks.validate --sizes 10000 100000 --runs 5
 ```
+
+Two native Tk tests are opt-in when a display is available:
+
+```bash
+QUANTLAB_GUI_TEST=1 python -m pytest -q tests/test_chart.py tests/test_replay_gui.py
+```
+
+On a headless Linux development machine with Xvfb installed, prefix the command
+with `xvfb-run -a env`. CI includes this native chart check on Python 3.14.
+See [replay measurements](benchmarks/replay-results.md) for the new feature.
 
 Hypothesis tests use deterministic settings and no persistent example database.
 Benchmarks create deterministic engineering input, fully consume results, and
@@ -145,6 +195,7 @@ raw archive. Passing validation establishes the documented data contract; it
 does not establish source authenticity, complete market coverage, or predictive
 ability.
 
-Feature 02 can consume these outcomes for offline arrow replay after successful
-validation. No broker connection, account authentication, trading, database,
-forecast model, or chart integration is implemented by Feature 01.
+Feature 02 consumes these same canonical ticks through a resettable iterator
+factory. See its architecture guide for the Feature 03 storage integration
+requirements. QuantLab includes no broker connection, account authentication,
+order execution, or learned prediction model.
