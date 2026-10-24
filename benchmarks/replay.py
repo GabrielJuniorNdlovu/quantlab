@@ -193,6 +193,8 @@ def main() -> None:
                 pstats.Stats(profile, stream=stream).strip_dirs().sort_stats("tottime").print_stats(
                     15
                 )
+    profile_path = args.output.with_name("replay-profile.txt")
+    profile_path.write_text(profile_path.read_text().rstrip() + "\n")
     sample_rss("after_profile")
     if root is not None:
         root.destroy()

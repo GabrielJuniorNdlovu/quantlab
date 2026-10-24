@@ -146,5 +146,3 @@ integrated_ticks (independent diagnostic, excluded from timings)
      1320    0.001    0.000    0.002    0.000 chart.py:122(y_at)
       156    0.000    0.000    0.000    0.000 {method 'fullmatch' of 're.Pattern' objects}
       210    0.000    0.000    0.000    0.000 <string>:2(__init__)
-
-
