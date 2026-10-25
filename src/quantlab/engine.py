@@ -1,6 +1,7 @@
 """Source-independent, incremental canonical validation for one acquisition."""
 
 from collections.abc import Iterable, Iterator, Mapping
+from dataclasses import replace
 from datetime import datetime
 from decimal import Decimal
 
@@ -22,6 +23,35 @@ from quantlab.quality import (
 )
 
 
+def normalize_reception(
+    raw: RawObservation, context: AcquisitionContext, received_at: object
+) -> RawObservation:
+    """Normalize only a supplied reception time, preserving source bytes and absent values."""
+    if received_at not in (None, ""):
+        try:
+            if not isinstance(received_at, (str, datetime)):
+                raise ContractError(
+                    ErrorCode.INVALID_TIMESTAMP,
+                    "received_at_utc",
+                    "received_at_utc requires ISO 8601 text or an aware datetime",
+                )
+            reception = parse_timestamp(received_at, "received_at_utc")
+            if reception != raw.received_at_utc:
+                raw = replace(raw, received_at_utc=reception)
+        except ContractError as exc:
+            raise QualityError(
+                quality_event(
+                    context.capture_id,
+                    raw.source_position,
+                    exc.code,
+                    exc.description,
+                    field_name=exc.field_name,
+                    severity=Severity.FATAL,
+                )
+            ) from exc
+    return raw
+
+
 def normalize_mapped_record(
     raw: RawObservation,
     context: AcquisitionContext,
@@ -32,6 +62,7 @@ def normalize_mapped_record(
     has_pip_size: bool = False,
 ) -> TickCandidate:
     """Normalize adapter-extracted fields into a TickCandidate for canonical validation."""
+    raw = normalize_reception(raw, context, mapped.get("received_at_utc"))
     external = mapped.get("instrument_id")
     instrument = instruments.get(external, "UNMAPPED") if isinstance(external, str) else None
     price = mapped.get("price")

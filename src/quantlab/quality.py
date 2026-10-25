@@ -66,6 +66,8 @@ class DataQualityEvent:
             raise ValueError("quality event position must be positive or absent")
         if not isinstance(self.error_code, ErrorCode) or not isinstance(self.severity, Severity):
             raise ValueError("quality event code and severity must be enums")
+        if not isinstance(self.description, str):
+            raise ValueError("quality event description must be text")
         for value, limit in (
             (self.description, 512),
             (self.field_name, 64),
@@ -73,6 +75,13 @@ class DataQualityEvent:
         ):
             if value is not None and (not isinstance(value, str) or len(value) > limit):
                 raise ValueError("quality event text exceeds its limit")
+            if value is not None:
+                try:
+                    value.encode("utf-8")
+                except UnicodeEncodeError as exc:
+                    raise ValueError("quality event text requires valid UTF-8") from exc
+                if "\x00" in value:
+                    raise ValueError("quality event text must not contain NUL")
         if self.detected_at_utc is not None:
             if self.detected_at_utc.tzinfo is None or self.detected_at_utc.utcoffset() is None:
                 raise ValueError("detection time requires an explicit timezone")

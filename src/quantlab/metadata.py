@@ -23,6 +23,8 @@ def _freeze(value: object, depth: int, budget: int) -> tuple[MetadataValue, int]
     elif isinstance(value, str):
         if len(value) > budget:
             raise ValueError("metadata exceeds size limit")
+        if "\x00" in value:
+            raise ValueError("metadata text must not contain NUL")
         budget -= len(value.encode("utf-8"))
         frozen = value
     elif isinstance(value, int):
