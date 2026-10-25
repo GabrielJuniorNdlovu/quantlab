@@ -41,6 +41,8 @@ class _RecordLines:
         if len(line) > remaining:
             raise OverflowError("CSV record exceeds byte limit")
         # LF/CRLF are supported; reject bare CR rather than normalizing evidence.
+        if b"\x00" in line:
+            raise ValueError("NUL is not supported in CSV text")
         if b"\r" in line.replace(b"\r\n", b""):
             raise ValueError("CSV requires LF or CRLF line endings")
         self.record.extend(line)
@@ -49,12 +51,13 @@ class _RecordLines:
         return line.decode("utf-8")
 
 
-def iter_csv_candidates(
+def iter_csv_records(
     stream: BinaryIO,
     context: AcquisitionContext,
     *,
     max_record_bytes: int = MAX_RAW_BYTES,
-) -> Iterator[TickCandidate]:
+    columns: tuple[str, ...] | None = None,
+) -> Iterator[tuple[RawObservation, dict[str, str]]]:
     """Yield unvalidated observed fields and exact row evidence; never close stream.
 
     Transport failures abort with a structured fatal event because malformed
@@ -91,13 +94,13 @@ def iter_csv_candidates(
             raise failure(ErrorCode.EMPTY_DATASET, "empty input: required CSV header is missing", 1)
         if (
             len(set(header)) != len(header)
-            or not set(CANONICAL_COLUMNS) <= set(header)
-            or not set(header) <= set(CANONICAL_COLUMNS + OPTIONAL_COLUMNS)
+            or not set(columns or CANONICAL_COLUMNS) <= set(header)
+            or (columns is None and not set(header) <= set(CANONICAL_COLUMNS + OPTIONAL_COLUMNS))
         ):
             raise failure(
                 ErrorCode.INVALID_CSV_SCHEMA,
                 "required columns: "
-                + ", ".join(CANONICAL_COLUMNS)
+                + ", ".join(columns or CANONICAL_COLUMNS)
                 + "; optional: provider_tick_id",
                 1,
             )
@@ -141,15 +144,7 @@ def iter_csv_candidates(
                     },
                 },
             )
-            yield TickCandidate(
-                raw=raw,
-                instrument_id=fields["instrument_id"],
-                provider_symbol=fields["provider_symbol"],
-                event_time=fields["event_time_utc"],
-                price=fields["price"],
-                pip_size=fields["pip_size"],
-                provider_tick_id=fields.get("provider_tick_id") or None,
-            )
+            yield raw, fields
         if not seen:
             raise failure(ErrorCode.EMPTY_DATASET, "empty dataset: no tick records", position)
     except OverflowError as exc:
@@ -164,3 +159,19 @@ def iter_csv_candidates(
         raise failure(
             ErrorCode.INVALID_CSV, "invalid CSV, UTF-8, or unsupported line ending", position
         ) from exc
+
+
+def iter_csv_candidates(
+    stream: BinaryIO, context: AcquisitionContext, *, max_record_bytes: int = MAX_RAW_BYTES
+) -> Iterator[TickCandidate]:
+    """Compatibility reader for the canonical CSV contract."""
+    for raw, fields in iter_csv_records(stream, context, max_record_bytes=max_record_bytes):
+        yield TickCandidate(
+            raw=raw,
+            instrument_id=fields["instrument_id"],
+            provider_symbol=fields["provider_symbol"],
+            event_time=fields["event_time_utc"],
+            price=fields["price"],
+            pip_size=fields["pip_size"],
+            provider_tick_id=fields.get("provider_tick_id") or None,
+        )

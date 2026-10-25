@@ -1,0 +1,3 @@
+{"symbol":"Boom export","time":"2026-01-01T02:00:00.123456+02:00","quote":1000.10,"id":"export-1"}
+{"symbol":"Boom export","time":"2026-01-01T00:00:00.123456Z","quote":"1000.10","id":"export-2"}
+{"symbol":"Boom export","time":"2026-01-01T00:00:01Z","quote":"1000.20"}

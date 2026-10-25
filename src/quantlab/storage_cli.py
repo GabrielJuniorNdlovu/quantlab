@@ -54,6 +54,23 @@ def _parser() -> argparse.ArgumentParser:
     replay.add_argument("--start", type=parse_timestamp)
     replay.add_argument("--end", type=parse_timestamp)
     replay.add_argument("--limit", type=int, default=100)
+    data = commands.add_parser("data").add_subparsers(dest="operation", required=True)
+    for operation in ("inspect", "import"):
+        command = data.add_parser(operation)
+        command.add_argument("dataset_path", type=Path)
+        command.add_argument("--config", type=Path, required=True)
+        if operation == "import":
+            command.add_argument("--source-id", default="local-historical")
+            command.add_argument("--batch-size", type=int, default=100)
+    listing = data.add_parser("list")
+    listing.add_argument("--limit", type=int, default=100)
+    validation = data.add_parser("validate")
+    validation.add_argument("dataset_id", type=UUID)
+    historical_replay = data.add_parser("replay")
+    historical_replay.add_argument("dataset_id", type=UUID)
+    historical_replay.add_argument("--start", type=parse_timestamp)
+    historical_replay.add_argument("--end", type=parse_timestamp)
+    historical_replay.add_argument("--limit", type=int, default=100)
     return parser
 
 
@@ -74,6 +91,26 @@ def _execute(args: argparse.Namespace, dsn: str) -> int:
             _print({"status": "schema_ready"})
             return 0
         with Repository(dsn) as repo:
+            if args.command == "data":
+                archive = SourceArchive(Path(os.environ.get("QUANTLAB_ARCHIVE_DIR", "raw-archive")))
+                if args.operation == "import":
+                    from quantlab.historical import HistoricalAdapter, HistoricalProfile
+
+                    result = IngestionCoordinator(
+                        repo, archive, BatchPolicy(max_records=args.batch_size)
+                    ).import_historical(
+                        args.dataset_path,
+                        adapter=HistoricalAdapter(HistoricalProfile.load(args.config)),
+                        source_id=args.source_id,
+                    )
+                    _print(result)
+                    return 0 if result.status == "COMPLETE" else 1
+                if args.operation == "list":
+                    _print(repo.manifests(limit=args.limit))
+                    return 0
+                if args.operation == "validate":
+                    _print(repo.validate_dataset(args.dataset_id, archive))
+                    return 0
             if args.command == "ingest":
                 if args.operation == "import":
                     archive = SourceArchive(
@@ -121,6 +158,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     try:
+        if args.command == "data" and args.operation == "inspect":
+            from quantlab.historical import HistoricalAdapter, HistoricalProfile
+
+            report = HistoricalAdapter(HistoricalProfile.load(args.config)).inspect(
+                args.dataset_path
+            )
+            _print(report)
+            return 0 if report["valid"] else 1
         dsn = os.environ.get("QUANTLAB_DATABASE_URL")
         if not dsn:
             raise ValueError("set QUANTLAB_DATABASE_URL to your PostgreSQL connection URL")
