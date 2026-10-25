@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
-from quantlab.models import AcquisitionContext
+from quantlab.models import AcquisitionContext, SourceType
 from quantlab.parsing import required_text
 
 
@@ -99,6 +99,16 @@ def json_value(value: object) -> object:
 
 def configuration(context: AcquisitionContext, source_id: str) -> dict[str, object]:
     required_text(source_id, "source_id")
+    profile = context.source_metadata.get("historical_adapter")
+    fields = profile.get("fields") if isinstance(profile, Mapping) else None
+    corrected_reception = (
+        context.source_type is SourceType.HISTORICAL_CSV
+        and isinstance(profile, Mapping)
+        and profile.get("version") == "historical.v1"
+        and profile.get("format") == "csv"
+        and isinstance(fields, Mapping)
+        and "received_at_utc" in fields
+    )
     return {
         "provider": context.provider,
         "provider_symbol": context.provider_symbol,
@@ -109,7 +119,9 @@ def configuration(context: AcquisitionContext, source_id: str) -> dict[str, obje
         "source_id": source_id,
         "market_tick_schema": "market_tick.v1",
         "raw_observation_schema": "raw_observation.v1",
-        "validation_version": "canonical.v1",
+        "validation_version": "canonical.v2.csv_reception"
+        if corrected_reception
+        else "canonical.v1",
     }
 
 

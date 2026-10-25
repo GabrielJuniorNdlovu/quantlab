@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from decimal import Decimal, DecimalException
 from typing import BinaryIO
 
+from quantlab.engine import normalize_reception
 from quantlab.models import (
     MAX_RAW_BYTES,
     AcquisitionContext,
@@ -13,8 +14,7 @@ from quantlab.models import (
     SourceFormat,
     SourceType,
 )
-from quantlab.parsing import parse_timestamp
-from quantlab.quality import ContractError, ErrorCode, QualityError, Severity, quality_event
+from quantlab.quality import ErrorCode, QualityError, Severity, quality_event
 
 
 def _object(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -117,18 +117,6 @@ def iter_json_records(
                     ErrorCode.INVALID_JSON_SCHEMA, "JSON object is missing configured fields"
                 )
             extracted = fields
-        received_at = context.received_at_utc
-        if received_at_column is not None:
-            raw_received = extracted.get(received_at_column)
-            if raw_received not in (None, ""):
-                if not isinstance(raw_received, str):
-                    raise fail(
-                        ErrorCode.INVALID_TIMESTAMP, "received_at_utc requires ISO 8601 text"
-                    )
-                try:
-                    received_at = parse_timestamp(raw_received, "received_at_utc")
-                except ContractError as exc:
-                    raise fail(exc.code, exc.description) from exc
         raw = RawObservation(
             context.capture_id,
             position,
@@ -136,7 +124,7 @@ def iter_json_records(
             SourceFormat.JSON,
             payload,
             hashlib.sha256(payload).hexdigest(),
-            received_at,
+            context.received_at_utc,
             {
                 "provider": context.source_metadata,
                 "adapter": {
@@ -147,5 +135,7 @@ def iter_json_records(
                 },
             },
         )
+        if received_at_column is not None:
+            raw = normalize_reception(raw, context, extracted.get(received_at_column))
         yield raw, extracted
         offset += len(payload)

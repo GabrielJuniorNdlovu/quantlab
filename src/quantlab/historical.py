@@ -146,7 +146,6 @@ class HistoricalAdapter:
                 context,
                 tuple(v for k, v in p.fields.items() if k not in optional_keys),
                 optional_columns=tuple(v for k, v in p.fields.items() if k in optional_keys),
-                received_at_column=p.fields.get("received_at_utc"),
             )
         )
         has_provider_symbol = "provider_symbol" in p.fields

@@ -17,6 +17,7 @@ from quantlab.storage.contracts import (
     ArchivedSource,
     IncompleteDataset,
     StorageError,
+    configuration,
     configuration_hash,
     historical_profile,
 )
@@ -67,6 +68,14 @@ def validate_dataset(dsn: str, dataset_id: UUID, archive: SourceArchive) -> dict
                 config["source_metadata"],
             )
             candidates = iter_csv_candidates
+        if (
+            configuration(context, config["source_id"])["validation_version"]
+            != config["validation_version"]
+        ):
+            raise StorageError(
+                "dataset uses a legacy validation version; re-import the archived source "
+                "with the current profile to create a corrected dataset"
+            )
         receipt = ArchivedSource(
             source["source_sha256"], source["source_bytes"], Path(source["source_path"])
         )
