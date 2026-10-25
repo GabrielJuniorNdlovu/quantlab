@@ -4,7 +4,8 @@ QuantLab validates local historical data for offline research on Boom 1000 Index
 Feature 01 separates exact source evidence from canonical `market_tick.v1` ticks
 and structured quality events. The single-instrument scope keeps the data
 contract precise. Feature 02 adds deterministic offline replay, M1 candlesticks,
-fixed fixture-alert arrows, and an independently inspectable audit log. Feature 03
+immutable versioned research arrows, availability-aware timing, and an independently
+inspectable audit log. Feature 03
 adds transactional PostgreSQL/TimescaleDB ingestion, original-source archival,
 recoverable import attempts, and completed-dataset replay.
 
@@ -38,40 +39,40 @@ manual push and include real TimescaleDB integration and recovery tests.
 ## Run the arrow replay
 
 ```bash
-python -m quantlab.replay_app --fixture demo
-```
-
-The application starts paused before the first tick. Click **Step forward** three
-times to reach source position 4: a gold UP arrow appears at 00:00:20 UTC before
-the constructed upward event. Click **Play**, **Pause**, or **Reset run**; change
-replay speed to control presentation timing. Reset creates a separate audit file.
-
-The desktop chart uses Tkinter, with no browser or network service. On Ubuntu,
-install `python3-tk` if your Python lacks Tk support. A graphical display is
-required for the window. The test fixture has 34 observations, a missing-minute
-gap, equal timestamps, and three retained alerts. It demonstrates one constructed
-event outcome, one unsuccessful window, and one unevaluated expiry. These are
-predetermined test alerts and provide no evidence of forecasting accuracy.
-
-Run without a display:
-
-```bash
-python -m quantlab.replay_app --fixture demo --headless
+python -m quantlab.replay_app --research-signals
+python -m quantlab.replay_app --research-signals --headless
 python -m quantlab.replay_app --inspect-audit replay-runs/RUN_UUID.jsonl
 ```
 
-The headless command reports the new audit path, 34 observations, three issued
-alerts, and outcomes `[true, false, null]`. It verifies chart geometry; it does
-not draw a native window. Audit files use exclusive creation and are never
-overwritten by reset. Keep `replay-runs/` when preserving research evidence;
-Git ignores this generated directory.
+The native Tk chart starts paused. Step forward three times to see a gold
+synthetic UP arrow issued at `00:00:20 UTC`, source position `4`, anchored to its
+`00:00` M1 candle. The fixture has 34 observations and three unevaluated research
+arrows. The headless command verifies geometry and reports the signal timeline;
+it draws no window. A graphical display and Python's Tk module are needed for
+the native chart. Reset creates a new audit file and preserves the original.
 
+`research_signal.v1` preserves exact issuance time, event cutoff and position,
+bar anchor, Decimal price, dataset identity, producer version, and frozen metadata.
+Recorded reception delays govern availability without changing candle event time.
+These fixtures provide no evidence of forecasting performance.
+
+The original `--fixture demo` command remains compatible, including its
+constructed-outcome demonstration. New callers use `--research-signals`.
+Persisted datasets can use the existing storage factory and bounded chart:
+
+```bash
+quantlab replay DATASET_UUID --show-chart --limit 100000
+quantlab data replay DATASET_UUID --show-chart --headless --limit 1000
+```
+
+Set `QUANTLAB_DATABASE_URL` for persisted replay. These commands generate no
+signals for market datasets. Plain `quantlab replay` retains JSON tick output.
 See the [Feature 02 guide](docs/features/feature-02.md),
-[replay architecture](docs/architecture/replay-engine.md),
-[verification evidence](docs/verification/feature-02.md), and
-[actual desktop capture](docs/features/replay-issued.png).
-The [MT5 prototype](integrations/mt5/README.md) remains uncompiled and unverified
-in a native terminal.
+[causal replay architecture](docs/architecture/causal-replay.md),
+[signal contract](docs/architecture/research-signal-contract.md), and
+[implementation review](docs/reviews/feature-02-implementation-review.md).
+The existing [MT5 prototype](integrations/mt5/README.md) remains uncompiled and
+has not been adapted to this new contract.
 
 ## Import durable historical datasets
 

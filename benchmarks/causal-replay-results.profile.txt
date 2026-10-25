@@ -1,0 +1,26 @@
+         2420532 function calls (2419917 primitive calls) in 1.822 seconds
+
+   Ordered by: internal time
+   List reduced from 254 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+    40012    0.205    0.000    1.101    0.000 dataclasses.py:1773(_replace)
+    50402    0.166    0.000    0.346    0.000 parsing.py:53(parse_price)
+    10000    0.123    0.000    0.987    0.000 replay_session.py:205(_consume)
+    40204    0.073    0.000    0.118    0.000 parsing.py:21(required_text)
+   428168    0.072    0.000    0.072    0.000 {built-in method builtins.isinstance}
+    40012    0.062    0.000    1.195    0.000 dataclasses.py:1754(replace)
+    10000    0.059    0.000    0.308    0.000 models.py:152(__post_init__)
+    10083    0.058    0.000    0.435    0.000 candles.py:28(__post_init__)
+    60422    0.058    0.000    0.101    0.000 {method 'as_tuple' of 'decimal.Decimal' objects}
+    30539    0.055    0.000    0.100    0.000 parsing.py:79(parse_timestamp)
+   261076    0.052    0.000    0.052    0.000 {built-in method builtins.getattr}
+    50372    0.042    0.000    0.394    0.000 parsing.py:46(require_decimal_price)
+    10001    0.041    0.000    0.494    0.000 causal_replay.py:54(source)
+    10001    0.037    0.000    0.617    0.000 replay.py:145(step)
+        1    0.033    0.033    1.951    1.951 causal_replay.py:78(work)
+    10000    0.033    0.000    0.623    0.000 candles.py:54(consume)
+    20000    0.031    0.000    0.046    0.000 replay.py:19(check_tick_order)
+    10000    0.029    0.000    0.040    0.000 fixture_outcomes.py:54(consume)
+    10001    0.027    0.000    1.768    0.000 replay_session.py:262(_drive)
+    20012    0.027    0.000    0.239    0.000 replay_session.py:195(snapshot)

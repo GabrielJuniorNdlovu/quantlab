@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from datetime import UTC, datetime
 from importlib.resources import files
 from io import BytesIO
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from quantlab.alerts import ReplayAlert
@@ -12,6 +13,9 @@ from quantlab.csv_adapter import iter_csv_candidates
 from quantlab.engine import validate_acquisition
 from quantlab.models import INSTRUMENT_ID, AcquisitionContext, MarketTick, SourceType
 from quantlab.quality import QualityError
+
+if TYPE_CHECKING:
+    from quantlab.signals import Observation, ResearchSignal
 
 CONTEXT = AcquisitionContext(
     UUID("22222222-2222-4222-8222-222222222222"),
@@ -48,4 +52,26 @@ def demo_alerts(horizon: int = 3) -> tuple[ReplayAlert, ...]:
             evaluation_horizon=horizon,
         )
         for number, minute, position in ((101, 0, 4), (102, 4, 16), (103, 10, 31))
+    )
+
+
+def demo_signals(observation: "Observation") -> tuple["ResearchSignal", ...]:
+    """Three synthetic arrows, with no future-event annotations or evaluation."""
+    from uuid import NAMESPACE_URL, uuid5
+
+    from quantlab.signals import ResearchSignal
+
+    if observation.tick.source_position not in (4, 16, 31):
+        return ()
+    return (
+        ResearchSignal.issue(
+            signal_id=uuid5(
+                NAMESPACE_URL,
+                f"quantlab.fixture.v2:{observation.source_dataset_id}:"
+                f"{observation.tick.source_position}",
+            ),
+            observation=observation,
+            producer_version="fixture.v2",
+            metadata={"purpose": "synthetic visualization test; unevaluated"},
+        ),
     )
