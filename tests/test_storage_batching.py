@@ -194,3 +194,33 @@ def test_structured_commit_and_failure_logs_never_claim_unacknowledged_persisten
     assert failure["committed"] == 0 and failure["buffered"] == 1
     assert failure["exception_type"] == "RuntimeError"
     assert "sensitive connection details" not in caplog.records[-1].getMessage()
+
+
+def test_quality_and_failure_metrics_acknowledge_only_committed_work():
+    from quantlab.models import ValidationOutcome
+    from quantlab.quality import ErrorCode, quality_event
+
+    row = outcome()
+    event = quality_event(
+        row.raw.capture_id,
+        row.raw.source_position,
+        ErrorCode.INVALID_PRICE,
+        "synthetic invalid price",
+    )
+    rejected = ValidationOutcome(row.raw, None, (event,))
+    writer = BatchWriter(lambda batch: None, BatchPolicy(max_records=1))
+    writer.submit(rejected)
+    writer.close()
+    assert writer.metrics.rejected == 1 and writer.metrics.quality_events == 1
+    assert writer.metrics.failures == 0 and writer.metrics.state == "CLOSED"
+    assert writer.metrics.last_commit_latency_seconds >= 0
+
+    def fail(batch):
+        raise OSError("synthetic sink failure")
+
+    broken = BatchWriter(fail, BatchPolicy(max_records=1))
+    broken.submit(rejected)
+    with pytest.raises(OSError):
+        broken.close()
+    assert broken.metrics.committed == broken.metrics.rejected == 0
+    assert broken.metrics.failures == 1 and broken.metrics.state == "FAILED"

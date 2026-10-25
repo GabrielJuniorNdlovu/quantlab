@@ -155,7 +155,9 @@ def test_historical_disconnect_rolls_back_and_retries(dsn, tmp_path, monkeypatch
     archive = SourceArchive(tmp_path / "archive")
     killed = []
     with Repository(dsn) as repo:
-        insert = repo._insert_outcome
+        from quantlab.storage import repository as storage_repository
+
+        insert = storage_repository.insert_batch
 
         def terminate(connection, outcome):
             insert(connection, outcome)
@@ -164,7 +166,7 @@ def test_historical_disconnect_rolls_back_and_retries(dsn, tmp_path, monkeypatch
                 with psycopg.connect(dsn, autocommit=True) as admin:
                     admin.execute("SELECT pg_terminate_backend(%s)", (connection.info.backend_pid,))
 
-        monkeypatch.setattr(repo, "_insert_outcome", terminate)
+        monkeypatch.setattr(storage_repository, "insert_batch", terminate)
         result = IngestionCoordinator(repo, archive).import_historical(
             path, adapter=HistoricalAdapter(profile("jsonl")), source_id=str(uuid4())
         )

@@ -211,7 +211,9 @@ def test_real_backend_termination_rolls_back_then_retries(dsn, tmp_path, monkeyp
     with Repository(dsn) as repo, repo.claim(source, ctx, f"backend-kill-{uuid4()}") as run:
         with source.path.open("rb") as stream:
             batch = tuple(validate_acquisition(iter_csv_candidates(stream, ctx), ctx))[:5]
-        original = repo._insert_outcome
+        from quantlab.storage import repository as storage_repository
+
+        original = storage_repository.insert_batch
         killed = False
 
         def terminate(connection, outcome):
@@ -224,7 +226,7 @@ def test_real_backend_termination_rolls_back_then_retries(dsn, tmp_path, monkeyp
                         "SELECT pg_terminate_backend(%s)", (connection.info.backend_pid,)
                     ).fetchone() == (True,)
 
-        monkeypatch.setattr(repo, "_insert_outcome", terminate)
+        monkeypatch.setattr(storage_repository, "insert_batch", terminate)
         repo.write_batch(run, 1, batch)
         assert killed and repo.manifest(run.dataset_id).observed == 5
         with psycopg.connect(dsn) as admin:
@@ -242,6 +244,8 @@ def test_abrupt_database_restart_retains_completed_dataset(dsn, tmp_path):
     result, before = import_fixture(
         dsn, fixture_file(tmp_path), tmp_path / "archive", f"restart-{uuid4()}"
     )
+    with Repository(dsn) as repo:
+        checkpoint_before = repo.commit_status(result.capture_id)
     container = compose(project, "ps", "-q", "postgres").stdout.decode().strip()
     assert container
     compose(project, "kill", "-s", "SIGKILL", "postgres")
@@ -250,6 +254,7 @@ def test_abrupt_database_restart_retains_completed_dataset(dsn, tmp_path):
     with Repository(dsn) as repo:
         after = tuple(repo.tick_factory(result.dataset_id, page_size=2)())
         assert repo.manifest(result.dataset_id) == result
+        assert repo.commit_status(result.capture_id) == checkpoint_before
     assert after == before
 
 

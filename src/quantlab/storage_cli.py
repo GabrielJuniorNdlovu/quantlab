@@ -34,6 +34,7 @@ def _parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     db = commands.add_parser("db").add_subparsers(dest="operation", required=True)
     db.add_parser("init", help="apply additive Alembic migrations")
+    db.add_parser("status", help="read database availability and storage usage")
     ingest = commands.add_parser("ingest").add_subparsers(dest="operation", required=True)
     importer = ingest.add_parser("import", help="preserve and import a canonical CSV")
     importer.add_argument("dataset_path", type=Path)
@@ -45,6 +46,9 @@ def _parser() -> argparse.ArgumentParser:
     status = ingest.add_parser("status")
     status.add_argument("dataset_id", type=UUID, nargs="?")
     status.add_argument("--limit", type=int, default=100)
+    status.add_argument(
+        "--attempts", action="store_true", help="show committed acquisition progress"
+    )
     datasets = ingest.add_parser("datasets")
     datasets.add_argument("--limit", type=int, default=100)
     replay = commands.add_parser(
@@ -90,13 +94,16 @@ def _execute(args: argparse.Namespace, dsn: str) -> int:
     from quantlab.storage.source_archive import SourceArchive
 
     try:
-        if args.command == "db":
+        if args.command == "db" and args.operation == "init":
             from quantlab.storage.repository import migrate
 
             migrate(dsn)
             _print({"status": "schema_ready"})
             return 0
         with Repository(dsn) as repo:
+            if args.command == "db":
+                _print({"database": "connected", "storage": repo.storage_usage()})
+                return 0
             if args.command == "data":
                 archive = SourceArchive(Path(os.environ.get("QUANTLAB_ARCHIVE_DIR", "raw-archive")))
                 if args.operation == "import":
@@ -134,8 +141,14 @@ def _execute(args: argparse.Namespace, dsn: str) -> int:
                     )
                     _print(result)
                     return 0 if result.status == "COMPLETE" else 1
+                if args.operation == "status" and args.attempts and args.dataset_id is None:
+                    raise ValueError("--attempts requires a dataset ID")
                 if args.operation == "status" and args.dataset_id is not None:
-                    _print(repo.manifest(args.dataset_id))
+                    _print(
+                        repo.acquisitions(args.dataset_id, limit=args.limit)
+                        if args.attempts
+                        else repo.manifest(args.dataset_id)
+                    )
                 else:
                     manifests = repo.manifests(limit=args.limit)
                     _print(

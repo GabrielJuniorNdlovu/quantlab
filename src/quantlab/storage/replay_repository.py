@@ -4,13 +4,11 @@ from collections.abc import Callable, Iterator
 from datetime import datetime
 from uuid import UUID
 
-import psycopg
-from psycopg.rows import dict_row
-
 from quantlab.models import MarketTick
-from quantlab.parsing import parse_timestamp
+from quantlab.parsing import parse_timestamp, require_position, require_uuid
 from quantlab.storage.contracts import IncompleteDataset, StorageError
 from quantlab.storage.mapping import tick_row
+from quantlab.storage.queries import read_connection
 
 
 def tick_factory(
@@ -22,6 +20,7 @@ def tick_factory(
     page_size: int = 1000,
     limit: int | None = None,
 ) -> Callable[[], Iterator[MarketTick]]:
+    require_uuid(dataset_id, "dataset_id")
     if type(page_size) is not int or not 1 <= page_size <= 10000:
         raise StorageError("page_size must be an integer from 1 to 10000")
     if limit is not None and (type(limit) is not int or limit < 1):
@@ -32,14 +31,7 @@ def tick_factory(
         raise StorageError("range requires start before end")
 
     def ticks() -> Iterator[MarketTick]:
-        with psycopg.connect(
-            dsn,
-            row_factory=dict_row,
-            connect_timeout=5,
-            options=(
-                "-c timezone=UTC -c default_transaction_read_only=on -c statement_timeout=30000"
-            ),
-        ) as connection:
+        with read_connection(dsn) as connection:
             selected = connection.execute(
                 "SELECT selected_capture,status FROM dataset_manifests WHERE dataset_id=%s",
                 (dataset_id,),
@@ -63,3 +55,33 @@ def tick_factory(
                         yield tick_row(row)
 
     return ticks
+
+
+def observation(dsn: str, dataset_id: UUID, source_position: int) -> MarketTick | None:
+    """Lookup within one immutable completed capture; raw identity supplies partition time."""
+    require_uuid(dataset_id, "dataset_id")
+    require_position(source_position)
+    if source_position >= 2**63:
+        raise StorageError("source position exceeds PostgreSQL BIGINT")
+    with read_connection(dsn) as connection:
+        selected = connection.execute(
+            "SELECT selected_capture,status FROM dataset_manifests WHERE dataset_id=%s",
+            (dataset_id,),
+        ).fetchone()
+        if selected is None or selected["status"] != "COMPLETE":
+            raise IncompleteDataset("lookup requires an existing completed dataset")
+        capture = selected["selected_capture"]
+        raw = connection.execute(
+            "SELECT accepted_at FROM raw_observations WHERE capture_id=%s AND source_position=%s",
+            (capture, source_position),
+        ).fetchone()
+        if raw is None or raw["accepted_at"] is None:
+            return None
+        row = connection.execute(
+            "SELECT * FROM market_ticks WHERE event_time_utc=%s AND capture_id=%s "
+            "AND source_position=%s",
+            (raw["accepted_at"], capture, source_position),
+        ).fetchone()
+        if row is None:
+            raise StorageError("accepted raw observation has no canonical tick")
+        return tick_row(row)

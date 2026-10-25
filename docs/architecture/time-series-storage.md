@@ -5,6 +5,8 @@ canonical contracts. It exposes completed, single-acquisition history to Feature
 02 without changing its replay, candle, alert, or visualization interfaces.
 The [operations guide](../features/feature-03.md) covers setup and CLI commands;
 [ADR-003](../adr/ADR-003-time-series-database.md) records the database decision.
+The [unified storage reference](market-data-storage.md) documents the shared
+batch contract and committed-progress queries.
 
 ## Component ownership
 
@@ -113,6 +115,11 @@ reconnects and must reacquire before further writes. Row state and batch receipt
 are rechecked inside the transaction. An unknown COMMIT result is reconciled by
 receipt identity rather than blindly replaying inserts. If another owner acquired
 the lock, the former owner fails instead of continuing concurrently.
+
+Batch inserts use three bounded PostgreSQL COPY passes inside the existing
+transaction: raw evidence, accepted canonical ticks, and quality events. COPY
+still runs the same database checks, foreign keys, and append-only guards. The
+measured comparison is in the [benchmark results](../../benchmarks/unified-storage-results.md).
 
 Only classified operational/connection, serialization, and deadlock failures are
 retried. Defaults are three attempts with exponential backoff starting at 0.1 s.

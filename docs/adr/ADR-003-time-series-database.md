@@ -66,6 +66,15 @@ owners from silently publishing conflicting progress.
 
 ## Consequences and alternatives
 
+The Feature 03 refactor retains the schema and migration chain. It replaces
+per-observation INSERT calls with three bounded COPY passes in the same atomic
+transaction and adds read-only committed-progress, attempt-history, exact
+observation, and storage-usage queries. Revalidation compares serialized
+canonical values so Decimal coefficient and exponent differences are not hidden
+by numeric equality. No index or fixed NUMERIC precision was added: the measured
+query plans did not establish a need, and declared precision would narrow the
+existing contract.
+
 The relational raw table enforces `(capture_id, source_position)` identity. The
 hypertable's timestamp-inclusive composite key and foreign key to raw accepted
 time prevent cross-time duplicate identity. Unconstrained NUMERIC plus checked

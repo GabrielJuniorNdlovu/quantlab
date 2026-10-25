@@ -1,10 +1,11 @@
 # Import and replay durable market datasets
 
-Feature 03 stores locally supplied canonical Boom 1000 CSV observations in
-PostgreSQL with TimescaleDB. It preserves the original file and each parsed raw
-record, validates every observation through Feature 01, and exposes completed
-acquisitions through Feature 02's replay factory. No broker connection or order
-execution is included.
+Feature 03 stores locally supplied historical and recorded canonical Boom 1000
+observations in PostgreSQL with TimescaleDB. It preserves source evidence,
+validates each observation through Feature 01, and exposes completed acquisitions
+through Feature 02's replay factory. The durable batch API also accepts already
+validated streaming observations; this does not add a live broker connection or
+order execution.
 
 ## Start the local database
 
@@ -182,9 +183,10 @@ an available display and `QUANTLAB_GUI_TEST=1`. Container restart and restore
 checks have additional explicit isolation gates described in the
 [verification report](../verification/feature-03.md).
 
-See the [storage measurements](../../benchmarks/storage-results.md) for batch-size
-comparisons, commit latency, memory, queue utilization, storage, queries, replay,
-and recovery evidence. Engineering fixture throughput is not a production SLO.
+See the [Feature 03 storage measurements](../../benchmarks/unified-storage-results.md)
+for repeated batch-size comparisons, 100k/1m/2m import runs, commit latency,
+memory, storage, query plans, and replay evidence. Engineering fixture throughput
+is not a production SLO.
 
 ## Troubleshoot operations
 
