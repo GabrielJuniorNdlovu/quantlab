@@ -1,0 +1,317 @@
+{
+  "fixture": "synthetic; no forecasting evaluation",
+  "observations": 34,
+  "dataset_sha256": "5844277603b0e9136898c93feedd2cd570f2a9cb64769fe7c3052553aa52a515",
+  "issued_signals": 3,
+  "timeline": [
+    {
+      "source_position": 2,
+      "available_at_utc": "2026-01-01T00:00:00+00:00",
+      "visible_signal_ids": [],
+      "partial_close": "1000.00"
+    },
+    {
+      "source_position": 3,
+      "available_at_utc": "2026-01-01T00:00:20+00:00",
+      "visible_signal_ids": [],
+      "partial_close": "1000.10"
+    },
+    {
+      "source_position": 4,
+      "available_at_utc": "2026-01-01T00:00:20+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b"
+      ],
+      "partial_close": "1000.12"
+    },
+    {
+      "source_position": 5,
+      "available_at_utc": "2026-01-01T00:00:40+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b"
+      ],
+      "partial_close": "1000.05"
+    },
+    {
+      "source_position": 6,
+      "available_at_utc": "2026-01-01T00:01:00+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b"
+      ],
+      "partial_close": "1000.20"
+    },
+    {
+      "source_position": 7,
+      "available_at_utc": "2026-01-01T00:01:20+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b"
+      ],
+      "partial_close": "1000.00"
+    },
+    {
+      "source_position": 8,
+      "available_at_utc": "2026-01-01T00:01:40+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b"
+      ],
+      "partial_close": "1000.15"
+    },
+    {
+      "source_position": 9,
+      "available_at_utc": "2026-01-01T00:02:00+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b"
+      ],
+      "partial_close": "1000.10"
+    },
+    {
+      "source_position": 10,
+      "available_at_utc": "2026-01-01T00:02:20+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b"
+      ],
+      "partial_close": "1045.00"
+    },
+    {
+      "source_position": 11,
+      "available_at_utc": "2026-01-01T00:02:40+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b"
+      ],
+      "partial_close": "1043.50"
+    },
+    {
+      "source_position": 12,
+      "available_at_utc": "2026-01-01T00:03:00+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b"
+      ],
+      "partial_close": "1044.00"
+    },
+    {
+      "source_position": 13,
+      "available_at_utc": "2026-01-01T00:03:20+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b"
+      ],
+      "partial_close": "1043.00"
+    },
+    {
+      "source_position": 14,
+      "available_at_utc": "2026-01-01T00:03:40+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b"
+      ],
+      "partial_close": "1044.20"
+    },
+    {
+      "source_position": 15,
+      "available_at_utc": "2026-01-01T00:04:00+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b"
+      ],
+      "partial_close": "1044.00"
+    },
+    {
+      "source_position": 16,
+      "available_at_utc": "2026-01-01T00:04:20+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1044.10"
+    },
+    {
+      "source_position": 17,
+      "available_at_utc": "2026-01-01T00:04:40+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.80"
+    },
+    {
+      "source_position": 18,
+      "available_at_utc": "2026-01-01T00:05:00+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.90"
+    },
+    {
+      "source_position": 19,
+      "available_at_utc": "2026-01-01T00:05:20+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.50"
+    },
+    {
+      "source_position": 20,
+      "available_at_utc": "2026-01-01T00:05:40+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.70"
+    },
+    {
+      "source_position": 21,
+      "available_at_utc": "2026-01-01T00:07:00+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.60"
+    },
+    {
+      "source_position": 22,
+      "available_at_utc": "2026-01-01T00:07:20+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.80"
+    },
+    {
+      "source_position": 23,
+      "available_at_utc": "2026-01-01T00:07:40+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.40"
+    },
+    {
+      "source_position": 24,
+      "available_at_utc": "2026-01-01T00:08:00+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.30"
+    },
+    {
+      "source_position": 25,
+      "available_at_utc": "2026-01-01T00:08:20+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.60"
+    },
+    {
+      "source_position": 26,
+      "available_at_utc": "2026-01-01T00:08:40+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.50"
+    },
+    {
+      "source_position": 27,
+      "available_at_utc": "2026-01-01T00:09:00+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.60"
+    },
+    {
+      "source_position": 28,
+      "available_at_utc": "2026-01-01T00:09:20+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.20"
+    },
+    {
+      "source_position": 29,
+      "available_at_utc": "2026-01-01T00:09:40+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.00"
+    },
+    {
+      "source_position": 30,
+      "available_at_utc": "2026-01-01T00:10:00+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3"
+      ],
+      "partial_close": "1043.10"
+    },
+    {
+      "source_position": 31,
+      "available_at_utc": "2026-01-01T00:10:20+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3",
+        "fd2853ca-a452-5e29-95be-ab38307c05cf"
+      ],
+      "partial_close": "1043.40"
+    },
+    {
+      "source_position": 32,
+      "available_at_utc": "2026-01-01T00:10:40+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3",
+        "fd2853ca-a452-5e29-95be-ab38307c05cf"
+      ],
+      "partial_close": "1043.20"
+    },
+    {
+      "source_position": 33,
+      "available_at_utc": "2026-01-01T00:11:00+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3",
+        "fd2853ca-a452-5e29-95be-ab38307c05cf"
+      ],
+      "partial_close": "1043.30"
+    },
+    {
+      "source_position": 34,
+      "available_at_utc": "2026-01-01T00:11:20+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3",
+        "fd2853ca-a452-5e29-95be-ab38307c05cf"
+      ],
+      "partial_close": "1043.00"
+    },
+    {
+      "source_position": 35,
+      "available_at_utc": "2026-01-01T00:11:40+00:00",
+      "visible_signal_ids": [
+        "549a3a77-6f3e-519f-840c-52c9fd58612b",
+        "cc94aa19-6aee-5fce-82a9-3a6be0e4dae3",
+        "fd2853ca-a452-5e29-95be-ab38307c05cf"
+      ],
+      "partial_close": "1043.15"
+    }
+  ],
+  "signal_contract": {
+    "schema_version": "research_signal.v1",
+    "signal_id": "549a3a77-6f3e-519f-840c-52c9fd58612b",
+    "instrument_id": "BOOM_1000",
+    "signal_type": "FIXTURE_UP",
+    "issued_at_utc": "2026-01-01T00:00:20+00:00",
+    "input_cutoff_utc": "2026-01-01T00:00:20+00:00",
+    "input_cutoff_source_position": 4,
+    "bar_open_time_utc": "2026-01-01T00:00:00+00:00",
+    "observed_price_at_issue": "1000.12",
+    "source_dataset_id": "5844277603b0e9136898c93feedd2cd570f2a9cb64769fe7c3052553aa52a515",
+    "producer_version": "fixture.v2",
+    "metadata": {
+      "purpose": "synthetic visualization test; unevaluated"
+    }
+  }
+}

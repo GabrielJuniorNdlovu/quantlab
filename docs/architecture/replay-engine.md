@@ -1,5 +1,10 @@
 # Replay engine and alert semantics
 
+This document describes the original fixture API retained for compatibility.
+The canonical research path and reception-aware clock are documented in
+[causal replay](causal-replay.md) and the
+[research signal contract](research-signal-contract.md).
+
 Feature 02 consumes Feature 01 `market_tick.v1` objects. `MarketTick` already owns
 instrument, Decimal precision, UTC normalization, capture identity, and source
 position. `validate_acquisition` owns raw-candidate validation. Replay checks the

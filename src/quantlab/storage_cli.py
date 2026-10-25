@@ -71,6 +71,12 @@ def _parser() -> argparse.ArgumentParser:
     historical_replay.add_argument("--start", type=parse_timestamp)
     historical_replay.add_argument("--end", type=parse_timestamp)
     historical_replay.add_argument("--limit", type=int, default=100)
+    for replay_parser in (replay, historical_replay):
+        replay_parser.add_argument("--show-chart", action="store_true")
+        replay_parser.add_argument(
+            "--headless", action="store_true", help="verify chart geometry without opening a window"
+        )
+        replay_parser.add_argument("--audit-dir", type=Path, default=Path("replay-runs"))
     return parser
 
 
@@ -143,6 +149,28 @@ def _execute(args: argparse.Namespace, dsn: str) -> int:
             factory = repo.tick_factory(
                 args.dataset_id, start_utc=args.start, end_utc=args.end, limit=args.limit
             )
+            if args.headless and not args.show_chart:
+                raise ValueError("--headless requires --show-chart")
+            if args.show_chart:
+                from quantlab.replay_app import run_gui, run_headless
+                from quantlab.replay_session import ReplaySession
+
+                manifest = repo.manifest(args.dataset_id)
+                session = ReplaySession(
+                    factory,
+                    (),
+                    manifest.source_sha256,
+                    args.audit_dir,
+                    source_dataset_id=str(args.dataset_id),
+                )
+                try:
+                    if args.headless:
+                        _print(run_headless(session))
+                    else:
+                        run_gui(session)
+                finally:
+                    session.close()
+                return 0
             for tick in factory():
                 _print({"schema_version": tick.schema_version, **asdict(tick)})
             return 0

@@ -12,7 +12,13 @@ from typing import TYPE_CHECKING
 from quantlab.audit import verify_log
 from quantlab.chart import ChartState, ChartWindow, chart_geometry
 from quantlab.replay import ReplayStatus
-from quantlab.replay_fixture import EVENT_POSITIONS, dataset_hash, demo_alerts, demo_ticks
+from quantlab.replay_fixture import (
+    EVENT_POSITIONS,
+    dataset_hash,
+    demo_alerts,
+    demo_signals,
+    demo_ticks,
+)
 from quantlab.replay_session import ReplaySession
 
 if TYPE_CHECKING:
@@ -23,7 +29,7 @@ def _headless_render(frame: ChartState) -> None:
     chart_geometry(frame, 1100, 600)
 
 
-def run_headless(session: ReplaySession) -> dict[str, object]:
+def run_headless(session: ReplaySession, *, fixture: bool = False) -> dict[str, object]:
     observations = 0
     while session.status not in (ReplayStatus.ENDED, ReplayStatus.FAILED):
         previous = session.snapshot().position
@@ -34,9 +40,19 @@ def run_headless(session: ReplaySession) -> dict[str, object]:
     session.close()
     report = verify_log(session.audit_path)
     return {
-        "fixture": "DETERMINISTIC_FIXTURE",
+        "fixture": "DETERMINISTIC_FIXTURE" if fixture else None,
         "observations": observations,
         "issued_alerts": len(state.arrows),
+        "issued_signals": len(session.signals),
+        "signal_timeline": [
+            {
+                "signal_id": str(s.signal_id),
+                "issued_at_utc": s.issued_at_utc.isoformat(),
+                "bar_open_time_utc": s.bar_open_time_utc.isoformat(),
+                "cutoff_source_position": s.input_cutoff_source_position,
+            }
+            for s in session.signals
+        ],
         "outcomes": [outcome.successful for outcome in state.outcomes],
         "status": state.status,
         "audit_path": str(session.audit_path.resolve()),
@@ -134,6 +150,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--fixture", choices=("demo",), default="demo")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument(
+        "--research-signals",
+        action="store_true",
+        help="canonical synthetic signals; no constructed outcome evaluation",
+    )
+    parser.add_argument(
         "--speed", type=float, default=60, help="presentation seconds per real second"
     )
     parser.add_argument(
@@ -148,15 +169,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         session = ReplaySession(
             demo_ticks,
-            demo_alerts(args.horizon),
+            () if args.research_signals else demo_alerts(args.horizon),
             dataset_hash(),
             args.audit_dir,
-            event_positions=EVENT_POSITIONS,
+            event_positions=frozenset() if args.research_signals else EVENT_POSITIONS,
+            signal_producer=demo_signals if args.research_signals else None,
             speed=args.speed,
         )
         try:
             if args.headless:
-                print(json.dumps(run_headless(session), sort_keys=True))
+                print(json.dumps(run_headless(session, fixture=True), sort_keys=True))
             else:
                 run_gui(session)
         finally:

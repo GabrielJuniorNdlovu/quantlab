@@ -1,105 +1,105 @@
-# Run the deterministic arrow replay
+# Run causal research-arrow replay
 
-Use the packaged engineering fixture to replay Boom 1000 test observations and
-inspect fixed research arrows. All prices, alerts, and the constructed upward
-event are predetermined test data. Outcome correctness establishes no market
-predictive performance. See the [replay architecture](../architecture/replay-engine.md)
-for contract semantics and limits.
+Replay the packaged synthetic tick fixture, build UTC M1 candles, and display
+immutable research arrows. These arrows test visualization and establish no
+predictive performance. No model, broker connection, or account is required.
 
-## Open the offline chart
+## Open the research chart
 
-From the repository root, install the project using the [README setup](../../README.md).
-Then run:
+Install the project using the [README](../../README.md), then run:
 
 ```bash
-.venv/bin/python -m quantlab.replay_app --fixture demo
+env -u PYTHONPATH .venv/bin/python -m quantlab.replay_app --research-signals
 ```
 
-The application starts paused before its first observation. It needs Python's Tk
-module and a graphical display. On Debian or Ubuntu, install the matching
-`python3-tk` system package if Tk is unavailable. No broker account, network
-service, or market-data download is required.
+The chart starts paused. Python needs Tk and a graphical display.
 
-1. Press **Step forward** three times. The first gold fixture arrow appears at
-   `2026-01-01 00:00:20 UTC`, source position `4`, price `1000.12`.
-2. Press **Play**. Observe the M1 candles as later ticks arrive.
-3. Press **Pause**. Check that the time, source position, and observed prices stop.
-4. Change **Replay speed**, then press **Play** to resume.
-5. Follow the alert history below the chart. The first alert resolves with the
-   constructed event present, the second resolves without one, and the third
-   expires with insufficient completed future candles.
-6. Check that every original arrow retains its issuance candle and price.
-7. Close the window to finalize its audit file before inspection.
+1. Press **Step forward** twice. No arrow appears.
+2. Press **Step forward** once more. The first gold `FIXTURE UP` arrow appears
+   at `2026-01-01T00:00:20Z`, source position `4`, price `1000.12`.
+3. Check its `00:00` candle anchor and `00:00:20` issuance label.
+4. Press **Play**, then **Pause**. Previously issued arrow times and prices stay fixed.
+5. Complete the replay. Three synthetic, unevaluated arrows remain in the history.
+6. Close the window to finish its audit file.
 
-Green and rose candles contain observed test prices. A white body outline marks
-the forming candle. Gold arrows identify fixture alerts; the history describes
-subsequent outcomes. Rescaling the chart can change pixel coordinates without
-changing an arrow's recorded time or price.
+**Reset run** opens a new audit file. The previous file remains unchanged. Closing
+before EOF records an interrupted run. The viewport shows at most 120 observed
+candles. Older arrows stay in immutable signal history and audit evidence, even
+when their bars leave the viewport. Pixel positions change when the chart rescales.
 
-Use **Reset run** to start again with a new run identity and audit file. The old
-run remains intact. A reset before exhaustion records an interrupted run.
+## Verify without a display
 
-## Change presentation and evaluation settings
-
-For a faster display, a different completed-candle horizon, and an explicit audit
-directory, run:
+Run the same replay and exact underlying candle calculations with geometry checks:
 
 ```bash
-.venv/bin/python -m quantlab.replay_app --fixture demo \
-	--speed 120 --horizon 3 --audit-dir replay-runs
+env -u PYTHONPATH .venv/bin/python -m quantlab.replay_app \
+	--research-signals --headless --audit-dir replay-runs
 ```
 
-`--speed` accepts finite values greater than zero and at most `1000`. It changes
-presentation timing. `--horizon` accepts integers from `1` through `1000` and
-changes the future window, so its outcomes can differ. The default horizon is
-three observed completed M1 candles after the issuance candle. Missing minutes
-never count as candles.
+Expect `34` observations, `3` issued signals, `outcomes: []`, `ENDED`, and
+`audit_verified: true`. `signal_timeline` preserves actual issue times and input
+positions `4`, `16`, and `31`. Headless geometry does not claim native rendering.
 
-## Complete a run without a display
-
-Run the same domain and deterministic chart geometry without opening Tk:
+Inspect the returned audit path independently:
 
 ```bash
-.venv/bin/python -m quantlab.replay_app --fixture demo --headless \
-	--audit-dir replay-runs
+env -u PYTHONPATH .venv/bin/python -m quantlab.replay_app \
+	--inspect-audit replay-runs/RUN_UUID.jsonl
 ```
 
-The default fixture produces `34` observations, `3` issued alerts, outcomes
-`[true, false, null]`, and status `ENDED`. Its JSON result includes `audit_path`
-and `audit_verified: true`. The `null` outcome is unevaluated expiry.
-`headless_geometry` records distinguish geometry checks from actual native
-`tk_canvas` rendering.
+The [automated demo test](../../tests/test_replay_app.py) repeats the command and
+compares verified logical audit events. The [native controller tests](../../tests/test_replay_gui.py)
+check arrow visibility before and after issuance using a real Tk canvas.
 
-To run the automated checks, use the project's development environment:
+## Replay a completed persisted dataset
+
+Set `QUANTLAB_DATABASE_URL` to an isolated or approved local database. Then run:
+
+```bash
+quantlab replay DATASET_UUID --show-chart --limit 100000 --audit-dir replay-runs
+quantlab data replay DATASET_UUID --show-chart --headless --limit 1000
+```
+
+These commands use F03's existing completed-dataset factory. They do not invent
+research signals for market datasets. `--start` and `--end` retain UTC inclusive
+start and exclusive end filtering. Without `--show-chart`, both commands retain
+the original JSON tick-stream output. The default limit remains 100 observations.
+
+## Use the research producer interface
+
+A producer receives one immutable `Observation`, containing only the released
+canonical tick, logical availability, and immutable dataset identifier. Return a
+tuple of `ResearchSignal` records. The session validates the exact current cutoff,
+price representation, instrument, dataset, and issuance time before durable append.
+An identical ID and record is ignored on redelivery; conflicting reuse fails.
+
+Use the [signal contract reference](../architecture/research-signal-contract.md)
+and [causal replay explanation](../architecture/causal-replay.md) for API semantics.
+`record_outcome` appends externally supplied outcome or expiry facts. This feature
+does not compute labels or evaluate a forecasting hypothesis.
+
+## Preserve original fixture callers
+
+`ReplayAlert`, `IssuedAlert`, `AlertOutcome`, and `AlertBook` remain importable from
+`quantlab.alerts`. Their implementation resides in `legacy_alerts.py` and
+`fixture_outcomes.py`. The original command without `--research-signals` retains
+its constructed outcomes `[true, false, null]` and `--horizon` option.
+
+Use the research producer for new callers. Legacy schedules require event-time
+availability and reject delayed input instead of publishing backdated arrows.
+Research and legacy schedules cannot be mixed in one session. Existing legacy
+MT5 fixture experiments have not been extended to the new signal schema.
+
+## Run engineering checks
 
 ```bash
 env -u PYTHONPATH .venv/bin/python -m pytest -q
 env -u PYTHONPATH .venv/bin/python -m ruff check .
 env -u PYTHONPATH .venv/bin/python -m ruff format --check .
 env -u PYTHONPATH .venv/bin/python -m mypy
+env -u PYTHONPATH .venv/bin/python -m benchmarks.causal_replay --ticks 100000 --gui
 ```
 
-Actual Tk rendering and arrow behavior were exercised through a virtual display.
-Native MT5 compilation and runtime behavior remain **UNVERIFIED**. See the
-[MT5 prototype check](../../integrations/mt5/README.md) and
-[performance measurements](../../benchmarks/replay-results.md).
-
-## Inspect the audit independently
-
-Substitute the emitted `audit_path` in this command:
-
-```bash
-.venv/bin/python -m quantlab.replay_app \
-	--inspect-audit replay-runs/RUN_UUID.jsonl
-```
-
-The report contains record, issued-alert, rendered-alert, and outcome counts.
-A malformed file, changed hash chain, illegal alert relationship, or missing
-completion record produces an explicit error and exit code `2`. Close an open
-visual demonstration before inspecting its completed log.
-
-For logical comparisons across runs, call `quantlab.audit.logical_events(path)`.
-Run IDs, processing timestamps, and hash bookkeeping are excluded; event-time
-values, configuration, exact decimal strings, issuance, and outcomes remain.
-Compare runs driven through the same rendering and control sequence. GUI timer
-cadence and explicit pause actions need not produce identical rendering records.
+Database tests need an explicit `QUANTLAB_TEST_DATABASE_URL`. Native tests need
+`QUANTLAB_GUI_TEST=1` and a display. Read the [implementation review](../reviews/feature-02-implementation-review.md)
+for executed checks, benchmark results, and remaining limits.

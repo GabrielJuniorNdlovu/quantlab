@@ -11,7 +11,10 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from enum import Enum
 from pathlib import Path
-from typing import NoReturn
+from typing import TYPE_CHECKING, NoReturn
+
+if TYPE_CHECKING:
+    from quantlab.signals import ResearchSignal
 from uuid import UUID, uuid4
 
 from quantlab.parsing import parse_price, parse_timestamp
@@ -26,7 +29,7 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def _json_value(value: object, depth: int = 0) -> object:
+def json_value(value: object, depth: int = 0) -> object:
     if depth > 32:
         raise ValueError("audit payload nesting exceeds 32")
     if value is None or isinstance(value, (str, bool, int)):
@@ -42,20 +45,20 @@ def _json_value(value: object, depth: int = 0) -> object:
             raise ValueError("audit Decimal must be finite")
         return str(value)
     if isinstance(value, Enum):
-        return _json_value(value.value, depth + 1)
+        return json_value(value.value, depth + 1)
     if is_dataclass(value) and not isinstance(value, type):
         return {
-            item.name: _json_value(getattr(value, item.name), depth + 1) for item in fields(value)
+            item.name: json_value(getattr(value, item.name), depth + 1) for item in fields(value)
         }
     if isinstance(value, Mapping):
         result: dict[str, object] = {}
         for key, item in value.items():
             if not isinstance(key, str):
                 raise TypeError("audit mapping keys must be strings")
-            result[key] = _json_value(item, depth + 1)
+            result[key] = json_value(item, depth + 1)
         return result
     if isinstance(value, (tuple, list)):
-        return [_json_value(item, depth + 1) for item in value]
+        return [json_value(item, depth + 1) for item in value]
     raise TypeError(f"unsupported audit value: {type(value).__name__}")
 
 
@@ -85,6 +88,7 @@ class AuditLog:
         self.path = directory / f"{self.run_id}.jsonl"
         self._dataset_hash = dataset_hash
         self._clock = clock
+        self._signal_records: dict[str, bytes] = {}
         self._sequence = 0
         self._previous = _ZERO_HASH
         self._closed = False
@@ -129,15 +133,29 @@ class AuditLog:
             raise ValueError("audit writer is closed")
         if not isinstance(kind, str) or not kind or len(kind) > 64:
             raise ValueError("audit kind must contain 1 to 64 characters")
+        signal_key = None
+        signal_bytes = None
+        if kind == "signal_issued":
+            signal = _research_signal(payload)
+            signal_key = str(signal.signal_id)
+            signal_bytes = _encode(signal.to_dict())
+            if signal_key in self._signal_records:
+                if self._signal_records[signal_key] != signal_bytes:
+                    raise ValueError("conflicting signal ID")
+                return
+            if len(self._signal_records) >= MAX_ALERTS:
+                raise ValueError("audit signal capacity exceeded")
+            if signal.issued_at_utc != event_time_utc:
+                raise ValueError("signal event time differs from issuance")
         record: dict[str, object] = {
             "schema_version": "audit_event.v1",
             "sequence": self._sequence + 1,
             "run_id": str(self.run_id),
             "dataset_sha256": self._dataset_hash,
-            "event_time_utc": _json_value(event_time_utc),
-            "processed_at_utc": _json_value(self._clock()),
+            "event_time_utc": json_value(event_time_utc),
+            "processed_at_utc": json_value(self._clock()),
             "kind": kind,
-            "payload": _json_value(payload),
+            "payload": json_value(payload),
             "previous_sha256": self._previous,
         }
         digest = hashlib.sha256(_encode(record)).hexdigest()
@@ -146,13 +164,16 @@ class AuditLog:
         if len(encoded) > MAX_RECORD_BYTES:
             raise ValueError("audit record exceeds 128 KiB")
         try:
-            self._file.write(encoded)
+            if self._file.write(encoded) != len(encoded):
+                raise OSError("short audit write; start a new run")
             self._file.flush()
             os.fsync(self._file.fileno())
         except OSError:
             self._failed = True
             self._file.close()
             raise
+        if signal_key is not None and signal_bytes is not None:
+            self._signal_records[signal_key] = signal_bytes
         self._previous = digest
         self._sequence += 1
 
@@ -203,6 +224,14 @@ def _unique_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
     return result
 
 
+def decode_json(data: bytes) -> object:
+    """Bounded callers supply canonical JSON; reject duplicate keys and nonfinite values."""
+    try:
+        return json.loads(data, object_pairs_hook=_unique_pairs, parse_constant=_reject_constant)
+    except (UnicodeDecodeError, RecursionError) as exc:
+        raise ValueError("invalid audit JSON") from exc
+
+
 def _records(path: Path) -> Iterator[dict[str, object]]:
     previous = _ZERO_HASH
     identity: tuple[object, object] | None = None
@@ -214,9 +243,7 @@ def _records(path: Path) -> Iterator[dict[str, object]]:
             if len(line) > MAX_RECORD_BYTES or not line.endswith(b"\n"):
                 raise ValueError(f"audit line {number} is oversized or truncated")
             try:
-                value: object = json.loads(
-                    line, object_pairs_hook=_unique_pairs, parse_constant=_reject_constant
-                )
+                value = decode_json(line)
             except (UnicodeDecodeError, RecursionError) as exc:
                 raise ValueError(f"invalid audit JSON at line {number}") from exc
             record = _mapping(value, "audit record")
@@ -327,8 +354,17 @@ def _outcome(
         raise ValueError("invalid outcome status")
 
 
+def _research_signal(payload: Mapping[str, object]) -> "ResearchSignal":
+    from quantlab.signals import ResearchSignal
+
+    return ResearchSignal.from_json(_encode(json_value(payload)).decode("ascii"))
+
+
 def verify_log(path: Path) -> dict[str, object]:
     """Check chains and alert causality. Tick truth requires the dataset itself."""
+    signals: dict[str, ResearchSignal] = {}
+    signal_terminal: set[str] = set()
+    signal_rendered: set[str] = set()
     issued: dict[str, dict[str, object]] = {}
     rendered: set[str] = set()
     outcomes: set[str] = set()
@@ -358,7 +394,44 @@ def verify_log(path: Path) -> dict[str, object]:
                 raise ValueError("run completion requires a reason")
             ended = True
             continue
-        if kind == "alert_issued":
+        if kind == "signal_issued":
+            signal = _research_signal(payload)
+            key = str(signal.signal_id)
+            if key in signals or len(signals) >= MAX_ALERTS:
+                raise ValueError("duplicate issued signal or signal capacity exceeded")
+            if event_time != signal.issued_at_utc.isoformat():
+                raise ValueError("signal event time differs from issuance")
+            signals[key] = signal
+        elif kind == "signal_rendered":
+            signal = _research_signal(payload)
+            key = str(signal.signal_id)
+            if key not in signals or signal.to_json() != signals[key].to_json():
+                raise ValueError("rendered signal differs from original issuance")
+            if _time(event_time, "render time") < signal.issued_at_utc:
+                raise ValueError("render precedes signal issuance")
+            if key in signal_rendered:
+                raise ValueError("duplicate signal render")
+            signal_rendered.add(key)
+        elif kind in {"signal_expired", "signal_outcome_recorded"}:
+            outcome_key = payload.get("signal_id")
+            if (
+                not isinstance(outcome_key, str)
+                or outcome_key not in signals
+                or outcome_key in signal_terminal
+            ):
+                raise ValueError("outcome requires a unique issued signal")
+            original_signal = signals[outcome_key]
+            for name in ("instrument_id", "source_dataset_id", "producer_version"):
+                if payload.get(name) != getattr(original_signal, name):
+                    raise ValueError("outcome changed signal identity")
+            if (
+                _time(event_time, "outcome time") < original_signal.issued_at_utc
+                or _position(payload.get("source_position"), "outcome source position")
+                < original_signal.input_cutoff_source_position
+            ):
+                raise ValueError("outcome precedes signal issuance")
+            signal_terminal.add(outcome_key)
+        elif kind == "alert_issued":
             alert = _issued(payload, event_time)
             identity = alert.get("alert_id")
             if not isinstance(identity, str):
@@ -403,6 +476,9 @@ def verify_log(path: Path) -> dict[str, object]:
         "valid": True,
         "run_id": run_id,
         "records": count,
+        "issued_signals": len(signals),
+        "rendered_signals": len(signal_rendered),
+        "signal_outcomes": len(signal_terminal),
         "issued_alerts": len(issued),
         "rendered_alerts": len(rendered),
         "outcomes": len(outcomes),

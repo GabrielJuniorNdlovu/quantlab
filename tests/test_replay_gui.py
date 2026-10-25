@@ -57,3 +57,37 @@ def test_real_controller_step_pause_reset_and_arrow_audit(tmp_path):
         assert run.snapshot().arrows == first.arrows
     finally:
         app.close()
+
+
+@pytest.mark.skipif(
+    os.environ.get("QUANTLAB_GUI_TEST") != "1", reason="opt-in native Tk display test"
+)
+def test_canonical_research_arrows_native_controller(tmp_path):
+    import tkinter as tk
+
+    from quantlab.replay_fixture import demo_signals
+
+    root = tk.Tk()
+    run = ReplaySession(demo_ticks, (), dataset_hash(), tmp_path, signal_producer=demo_signals)
+    app = _Application(root, run)
+    try:
+        root.update()
+        for _ in range(2):
+            app.window.buttons["Step forward"].invoke()
+            root.update()
+            assert not app.window.canvas.find_withtag("arrow")
+        app.window.buttons["Step forward"].invoke()
+        root.update()
+        first = run.signals[0]
+        tag = f"alert:{first.signal_id}"
+        assert len(app.window.canvas.find_withtag(tag)) == 2  # arrow and exact issuance label
+        while run.status is not ReplayStatus.ENDED:
+            app.window.buttons["Step forward"].invoke()
+            root.update()
+        assert run.signals[0] == first
+        assert len(app.window.canvas.find_withtag("arrow")) == 3
+        assert "SYNTHETIC / unevaluated" in app.window.details.get()
+        assert run.snapshot().outcomes == ()
+    finally:
+        app.close()
+    assert verify_log(run.audit_path)["rendered_signals"] == 3

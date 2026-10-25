@@ -89,3 +89,43 @@ are linked in the [MT5 feasibility document](../../integrations/mt5/README.md).
 Native compilation and MT5 runtime behavior remain **UNVERIFIED**. The prototype
 renders predetermined offline arrows; it does not certify integrated replay or
 forecasting accuracy. Full MT5 presentation remains a later feature.
+
+## 2026-10-25: Causal research signal extension
+
+The F02 refactor retains the engine, candle builder, chart, storage factory, and
+hash-chain audit format. `ResearchSignal` is the canonical new issued artifact;
+legacy fixture types remain behind compatibility exports. Constructed outcome
+calculation moves to `fixture_outcomes.py` and is absent from the research demo.
+Externally supplied outcome facts append separately.
+
+Two read-only design candidates were compared using the architect skill.
+Candidate A extended session ownership and proposed a legacy projection adapter.
+Candidate B made typed events the main API. Both identified reception-time
+availability and cross-minute anchors as coordinated contract changes. We retain
+A's session ownership and use B's immutable event envelopes, without adding an
+event bus or another replay engine. The runners used the inherited available
+model; this is independent design exploration, not distinct-model consensus.
+
+The session accepts a producer and an event consumer. It validates only the
+current released cutoff, deduplicates stable IDs, and limits signals to 1000.
+The alternative of exposing historical tick arrays would enlarge the caller's
+information boundary and require future-access controls. A generic event pipeline
+would add another lifecycle owner. Neither is required for this feature.
+
+Availability is the monotonic maximum of event time, supplied reception, and
+previous availability. Candles retain event-time membership. For delayed inputs,
+the arrow anchors to the observed event minute while preserving actual issuance.
+Missing reception stays absent in canonical ticks. Legacy schedules reject delayed
+inputs instead of claiming event-time issuance.
+
+We accept current-cutoff-only producers, a bounded viewport, and finite per-run
+signal identity storage. Later statistical research must evaluate hypothesis
+quality separately. Exact Decimal strings and UTC timestamps define standalone
+`research_signal.v1` interchange for a later read-only MT5 consumer. No new MQL5
+implementation is part of this decision.
+
+Audit hardening detects short writes before sequence advancement. Existing
+`logical_events` already removes operational randomness, so a new audit format
+would duplicate working code. Actual guarantees and limitations are in
+[causal replay](causal-replay.md) and the
+[implementation review](../reviews/feature-02-implementation-review.md).

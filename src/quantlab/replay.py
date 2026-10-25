@@ -59,6 +59,7 @@ class ReplayEngine:
         self._pending: MarketTick | None = None
         self._current: MarketTick | None = None
         self._origin: datetime | None = None
+        self._available: datetime | None = None
         self._clock_us = Decimal(0)
         self._status = ReplayStatus.PAUSED
 
@@ -69,6 +70,17 @@ class ReplayEngine:
     @property
     def current(self) -> MarketTick | None:
         return self._current
+
+    @property
+    def available_at_utc(self) -> datetime | None:
+        return self._available
+
+    def _availability(self, tick: MarketTick) -> datetime:
+        return max(
+            tick.event_time_utc,
+            tick.received_at_utc or tick.event_time_utc,
+            self._available or tick.event_time_utc,
+        )
 
     @property
     def position(self) -> int:
@@ -113,7 +125,7 @@ class ReplayEngine:
             check_tick_order(self._current, tick)
             self._pending = tick
             if self._origin is None:
-                self._origin = tick.event_time_utc
+                self._origin = self._availability(tick)
             return tick
         except Exception:
             self._status = ReplayStatus.FAILED
@@ -122,10 +134,11 @@ class ReplayEngine:
 
     def _offset_us(self, tick: MarketTick) -> int:
         assert self._origin is not None
-        delta = tick.event_time_utc - self._origin
+        delta = self._availability(tick) - self._origin
         return (delta.days * 86400 + delta.seconds) * 1_000_000 + delta.microseconds
 
     def _consume(self, tick: MarketTick) -> None:
+        self._available = self._availability(tick)
         self._current = tick
         self._pending = None
 
@@ -154,6 +167,7 @@ class ReplayEngine:
         self._clock_us += Decimal(str(elapsed_seconds)) * self._speed * 1_000_000
         emitted: list[MarketTick] = []
         previous = self._current
+        previous_available = self._available
         try:
             while len(emitted) < max_ticks:
                 tick = self._next()
@@ -164,6 +178,7 @@ class ReplayEngine:
         except Exception:
             # A failed batch publishes nothing; observers keep the prior committed position.
             self._current = previous
+            self._available = previous_available
             self._pending = None
             raise
         return tuple(emitted)
@@ -174,6 +189,7 @@ class ReplayEngine:
         self._pending = None
         self._current = None
         self._origin = None
+        self._available = None
         self._clock_us = Decimal(0)
         self._status = ReplayStatus.PAUSED
 

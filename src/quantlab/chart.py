@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 from quantlab.alerts import AlertOutcome, IssuedAlert
 from quantlab.candles import Candle
+from quantlab.signals import ResearchSignal
 
 BACKGROUND = "#020617"
 PANEL = "#0F172A"
@@ -36,7 +37,7 @@ class ChartState:
     """Only released observations and already issued alerts enter the renderer."""
 
     candles: tuple[Candle, ...]
-    arrows: tuple[IssuedAlert, ...]
+    arrows: tuple[ResearchSignal | IssuedAlert, ...]
     outcomes: tuple[AlertOutcome, ...]
     position: int
     replay_time: datetime | None
@@ -56,7 +57,7 @@ class CandleGlyph:
 
 @dataclass(frozen=True, slots=True)
 class ArrowGlyph:
-    issued: IssuedAlert
+    issued: ResearchSignal | IssuedAlert
     x: float
     y: float
 
@@ -78,18 +79,16 @@ def _display_price(price: Decimal) -> float:
 
 def chart_geometry(state: ChartState, width: int, height: int) -> ChartGeometry:
     """Map UTC minute anchors and observed OHLC into a finite canvas scene."""
+    ids = [a.signal_id for a in state.arrows]
+    if len(set(ids)) != len(ids):
+        raise ValueError("renderer requires unique signal IDs")
     for issued in state.arrows:
-        alert = issued.alert
-        if alert.status != "ISSUED":
-            raise ValueError("renderer requires an issued alert")
         if (
             state.replay_time is None
-            or alert.issued_at_utc > state.replay_time
-            or alert.issued_at_source_position > state.position
+            or issued.issued_at_utc > state.replay_time
+            or issued.input_cutoff_source_position > state.position
         ):
             raise ValueError("renderer cannot expose a future alert")
-        if issued.candle_open_utc != alert.issued_at_utc.replace(second=0, microsecond=0):
-            raise ValueError("arrow anchor must match its issuance candle")
     if any(state.replay_time is None or c.opened_at_utc > state.replay_time for c in state.candles):
         raise ValueError("renderer cannot expose a future candle")
     if not state.candles:
@@ -108,9 +107,9 @@ def chart_geometry(state: ChartState, width: int, height: int) -> ChartGeometry:
     def x_at(time: datetime) -> float:
         return left + ((time - first).total_seconds() / 60 + 0.5) * spacing
 
-    visible = tuple(a for a in state.arrows if first <= a.candle_open_utc <= last)
+    visible = tuple(a for a in state.arrows if first <= a.bar_open_time_utc <= last)
     prices = {p for c in state.candles for p in (c.open, c.high, c.low, c.close)}
-    prices.update(a.price for a in visible)
+    prices.update(a.observed_price_at_issue for a in visible)
     displayed = {_display_price(price) for price in prices}
     if len(displayed) != len(prices):
         raise ValueError("distinct prices collide at binary float display precision")
@@ -134,7 +133,9 @@ def chart_geometry(state: ChartState, width: int, height: int) -> ChartGeometry:
         )
         for c in state.candles
     )
-    arrows = tuple(ArrowGlyph(a, x_at(a.candle_open_utc), y_at(a.price)) for a in visible)
+    arrows = tuple(
+        ArrowGlyph(a, x_at(a.bar_open_time_utc), y_at(a.observed_price_at_issue)) for a in visible
+    )
     price_ticks = tuple(
         (bottom - i * (bottom - top) / 4, minimum + i * (maximum - minimum) / 4) for i in range(5)
     )
@@ -188,7 +189,7 @@ def draw_chart(canvas: tk.Canvas, state: ChartState) -> None:
             tags=("candle",),
         )
     for a in geometry.arrows:
-        key = f"alert:{a.issued.alert.alert_id}"
+        key = f"alert:{a.issued.signal_id}"
         canvas.create_line(
             a.x,
             a.y + 29,
@@ -204,7 +205,7 @@ def draw_chart(canvas: tk.Canvas, state: ChartState) -> None:
         canvas.create_text(
             a.x,
             label_y,
-            text=f"FIXTURE UP\n{a.issued.alert.issued_at_utc:%H:%M:%S}",
+            text=f"FIXTURE UP\n{a.issued.issued_at_utc:%H:%M:%S}",
             fill=FIXTURE,
             font=("TkDefaultFont", 9),
             tags=("arrow_label", key),
@@ -361,12 +362,11 @@ class ChartWindow:
             f"   |   Issued alerts: {len(state.arrows)}"
         )
         terminal = {o.alert_id: o for o in state.outcomes}
-        active = [a for a in state.arrows if a.alert.alert_id not in terminal]
+        active = [a for a in state.arrows if a.signal_id not in terminal]
         lines = [f"Active alerts: {len(active)}"]
         for issued in state.arrows:
-            alert = issued.alert
-            outcome = terminal.get(alert.alert_id)
-            result = "ACTIVE / awaiting completed future candles"
+            outcome = terminal.get(issued.signal_id)
+            result = "SYNTHETIC / unevaluated research arrow"
             if outcome is not None:
                 result = (
                     "RESOLVED / constructed event present"
@@ -376,8 +376,9 @@ class ChartWindow:
                     else "EXPIRED / insufficient completed future candles"
                 )
             lines.append(
-                f"{str(alert.alert_id)[-8:]}  UP  issued {alert.issued_at_utc:%H:%M:%S} UTC"
-                f"  at #{alert.issued_at_source_position} / {issued.price}  |  {result}"
+                f"{str(issued.signal_id)[-8:]}  UP  issued {issued.issued_at_utc:%H:%M:%S} UTC"
+                f"  at #{issued.input_cutoff_source_position} / "
+                f"{issued.observed_price_at_issue}  |  {result}"
             )
         if not state.arrows:
             lines.append("No alert has been issued.")
