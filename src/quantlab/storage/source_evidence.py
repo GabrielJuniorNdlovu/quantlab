@@ -1,4 +1,4 @@
-"""Bounded proof that committed CSV row evidence covers the full archived source."""
+"""Bounded proof that committed CSV or JSON Lines evidence covers the full archived source."""
 
 import hashlib
 from typing import Any
@@ -6,7 +6,7 @@ from uuid import UUID
 
 import psycopg
 
-from quantlab.storage.contracts import StorageError
+from quantlab.storage.contracts import StorageError, historical_profile
 
 
 def verify_complete_source(
@@ -18,7 +18,20 @@ def verify_complete_source(
         (dataset_id,),
     ).fetchone()
     assert source is not None
-    if source["configuration"]["source_type"] != "historical_csv":
+    config = source["configuration"]
+    profile = historical_profile(config) or {}
+    if profile and (
+        profile.get("version") != "historical.v1"
+        or profile.get("format")
+        != ("csv" if config["source_type"] == "historical_csv" else "jsonl")
+    ):
+        raise StorageError("unsupported historical source profile version or format")
+    json_lines = (
+        config["source_type"] == "historical_json"
+        and profile.get("version") == "historical.v1"
+        and profile.get("format") == "jsonl"
+    )
+    if config["source_type"] != "historical_csv" and not json_lines:
         raise StorageError("source completion requires a supported whole-source framing contract")
     digest = hashlib.sha256()
     count = 0
@@ -33,15 +46,21 @@ def verify_complete_source(
             for row in rows:
                 adapter = row["source_metadata"].get("adapter", {})
                 current = adapter.get("header") if isinstance(adapter, dict) else None
-                if not isinstance(current, str):
+                if not json_lines and not isinstance(current, str):
                     raise StorageError("source completion requires preserved CSV header evidence")
-                if header is None:
+                if json_lines:
+                    if adapter.get("framing") != "json_lines.v1":
+                        raise StorageError("unsupported JSON source framing")
+                elif header is None:
+                    assert isinstance(current, str)
                     header = current
                     encoded = header.encode("utf-8")
                     digest.update(encoded)
                     count = len(encoded)
                 elif current != header:
                     raise StorageError("source header evidence changed between observations")
+                if profile and adapter.get("byte_offset") != count:
+                    raise StorageError("noncontiguous original source evidence")
                 payload = bytes(row["raw_payload"])
                 digest.update(payload)
                 count += len(payload)

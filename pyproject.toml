@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quantlab"
-version = "0.4.0"
+version = "0.5.0"
 description = "Local market data integrity checks for Boom 1000 Index research"
 requires-python = ">=3.11"
 dependencies = []

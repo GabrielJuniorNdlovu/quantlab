@@ -1,0 +1,10 @@
+{
+  "version": "historical.v1",
+  "format": "csv",
+  "provider": "engineering-fixture",
+  "provider_symbol": "BOOM-export",
+  "pip_size": 2,
+  "timestamp": "iso8601",
+  "fields": {"instrument_id": "symbol", "event_time": "time", "price": "quote", "provider_tick_id": "id"},
+  "instruments": {"Boom export": "BOOM_1000"}
+}

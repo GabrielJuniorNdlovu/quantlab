@@ -117,3 +117,13 @@ def configuration_hash(value: dict[str, object]) -> str:
     return hashlib.sha256(
         json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     ).hexdigest()
+
+
+def historical_profile(config: dict[str, object]) -> dict[str, object] | None:
+    """Recognize the versioned adapter contract, leaving legacy provider notes alone."""
+    metadata = config.get("source_metadata")
+    value = metadata.get("historical_adapter") if isinstance(metadata, dict) else None
+    version = value.get("version") if isinstance(value, dict) else None
+    if isinstance(value, dict) and isinstance(version, str) and version.startswith("historical."):
+        return value
+    return None

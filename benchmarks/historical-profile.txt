@@ -1,0 +1,36 @@
+         446453 function calls (408401 primitive calls) in 0.299 seconds
+
+   Ordered by: cumulative time
+   List reduced from 78 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.004    0.004    0.309    0.309 historical.py:57(scan)
+     1001    0.003    0.000    0.302    0.000 engine.py:122(validate_acquisition)
+     1001    0.009    0.000    0.225    0.000 historical.py:142(candidates)
+     1001    0.016    0.000    0.209    0.000 historical_json.py:50(iter_json_records)
+     1000    0.006    0.000    0.152    0.000 models.py:86(__post_init__)
+     1002    0.001    0.000    0.141    0.000 metadata.py:59(freeze_metadata)
+39054/1002    0.082    0.000    0.135    0.000 metadata.py:16(_freeze)
+     1000    0.009    0.000    0.073    0.000 engine.py:49(validate_tick)
+   167179    0.031    0.000    0.045    0.000 {built-in method builtins.isinstance}
+     1000    0.007    0.000    0.029    0.000 models.py:145(__post_init__)
+     1000    0.002    0.000    0.028    0.000 historical_json.py:37(strict_json)
+     1000    0.005    0.000    0.026    0.000 __init__.py:304(loads)
+     2000    0.011    0.000    0.021    0.000 parsing.py:31(parse_price)
+     1000    0.003    0.000    0.017    0.000 decoder.py:340(decode)
+     9012    0.003    0.000    0.015    0.000 <frozen abc>:117(__instancecheck__)
+     2000    0.006    0.000    0.013    0.000 parsing.py:57(parse_timestamp)
+     9012    0.006    0.000    0.012    0.000 {built-in method _abc._abc_instancecheck}
+    70092    0.012    0.000    0.012    0.000 {built-in method builtins.len}
+     1000    0.004    0.000    0.011    0.000 decoder.py:351(raw_decode)
+    35044    0.010    0.000    0.010    0.000 {method 'encode' of 'str' objects}
+     5004    0.006    0.000    0.010    0.000 parsing.py:20(required_text)
+     4000    0.005    0.000    0.008    0.000 {method 'as_tuple' of 'decimal.Decimal' objects}
+     1000    0.005    0.000    0.008    0.000 historical_json.py:13(_object)
+     5002    0.002    0.000    0.006    0.000 <frozen abc>:121(__subclasscheck__)
+     5002    0.004    0.000    0.005    0.000 {built-in method _abc._abc_subclasscheck}
+     1000    0.002    0.000    0.004    0.000 <string>:2(__init__)
+     2000    0.004    0.000    0.004    0.000 {method 'fullmatch' of 're.Pattern' objects}
+     4000    0.002    0.000    0.004    0.000 <string>:1(<lambda>)
+     1000    0.003    0.000    0.003    0.000 decoder.py:292(__init__)
+     2000    0.003    0.000    0.003    0.000 {built-in method _hashlib.openssl_sha256}

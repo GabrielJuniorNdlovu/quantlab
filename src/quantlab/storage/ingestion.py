@@ -3,17 +3,18 @@
 import json
 import logging
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import AbstractContextManager
 from datetime import datetime
 from pathlib import Path
-from typing import Protocol
+from typing import BinaryIO, Protocol
 from uuid import UUID, uuid4
 
 from quantlab.csv_adapter import iter_csv_candidates
 from quantlab.engine import validate_acquisition
+from quantlab.historical import HistoricalAdapter
 from quantlab.metadata import MetadataValue
-from quantlab.models import AcquisitionContext, SourceType, ValidationOutcome
+from quantlab.models import AcquisitionContext, SourceType, TickCandidate, ValidationOutcome
 from quantlab.quality import DataQualityEvent, QualityError
 from quantlab.storage.contracts import (
     ArchivedSource,
@@ -77,6 +78,20 @@ class IngestionCoordinator:
             received_at_utc,
             source_metadata or {},
         )
+        return self._import(path, context, source_id, iter_csv_candidates)
+
+    def import_historical(
+        self, path: Path, *, adapter: "HistoricalAdapter", source_id: str = "local-historical"
+    ) -> DatasetManifest:
+        return self._import(path, adapter.context(), source_id, adapter.candidates)
+
+    def _import(
+        self,
+        path: Path,
+        context: AcquisitionContext,
+        source_id: str,
+        candidates: Callable[[BinaryIO, AcquisitionContext], Iterator[TickCandidate]],
+    ) -> DatasetManifest:
         started = time.monotonic()
         source = self.archive.preserve(path)
         with self.repository.claim(source, context, source_id) as run:
@@ -124,9 +139,7 @@ class IngestionCoordinator:
             try:
                 with self.archive.open_verified(source) as stream:
                     try:
-                        outcomes = validate_acquisition(
-                            iter_csv_candidates(stream, context), context
-                        )
+                        outcomes = validate_acquisition(candidates(stream, context), context)
                         for outcome in outcomes:
                             pending.append(outcome)
                             if len(pending) >= self.policy.max_records:
@@ -137,6 +150,11 @@ class IngestionCoordinator:
                         _log(
                             "ingestion_validation_failed",
                             dataset_id=run.dataset_id,
+                            capture_id=run.capture_id,
+                            status="FAILED",
+                            accepted=accepted,
+                            rejected=rejected,
+                            elapsed_seconds=time.monotonic() - started,
                             code=exc.event.error_code.value,
                             durable_observations=committed,
                         )
@@ -153,6 +171,7 @@ class IngestionCoordinator:
                     durable_observations=result.observed,
                     accepted=result.accepted,
                     rejected=result.rejected,
+                    error_count=result.error_count,
                     elapsed_seconds=elapsed,
                     observations_per_second=result.observed / elapsed,
                 )

@@ -6,7 +6,7 @@ import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 import psycopg
@@ -35,6 +35,9 @@ from quantlab.storage.mapping import batch_digest, manifest_row, wire_value
 from quantlab.storage.migration_runner import migrate as migrate
 from quantlab.storage.replay_repository import tick_factory
 from quantlab.storage.source_evidence import verify_complete_source
+
+if TYPE_CHECKING:
+    from quantlab.storage.source_archive import SourceArchive
 
 _LOG = logging.getLogger(__name__)
 _T = TypeVar("_T")
@@ -464,6 +467,11 @@ class Repository:
                 )
 
         self._retry(fail)
+
+    def validate_dataset(self, dataset_id: UUID, archive: "SourceArchive") -> dict[str, object]:
+        from quantlab.storage.dataset_validation import validate_dataset
+
+        return validate_dataset(self.dsn, dataset_id, archive)
 
     def manifest(self, dataset_id: UUID) -> DatasetManifest:
         row = self._retry(

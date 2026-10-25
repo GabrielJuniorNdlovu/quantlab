@@ -248,3 +248,23 @@ ability.
 Feature 03 exposes a resettable factory of these same canonical ticks for
 Feature 02. It does not merge overlapping acquisitions automatically. QuantLab includes no broker connection, account authentication,
 order execution, or learned prediction model.
+
+## Historical exports (Feature 04)
+
+Import local mapped CSV or documented flat JSON Lines with an explicit source profile:
+
+```bash
+quantlab data inspect data/fixtures/historical/ticks.csv --config data/fixtures/historical/profile-csv.json
+quantlab data import data/fixtures/historical/ticks.csv --config data/fixtures/historical/profile-csv.json --source-id approved-export-001
+quantlab data list --limit 20
+quantlab data validate DATASET_UUID
+quantlab data replay DATASET_UUID --limit 100
+```
+
+Inspection works without a database. Import uses the Feature 03 database/archive configuration,
+transactional batches, recovery and idempotence. Profiles explicitly map external instruments
+to `BOOM_1000` and supply documented symbol, timestamp and precision semantics. Original bytes,
+repeated observations and source order are retained. Overlapping files stay separate datasets.
+See [import instructions and supported formats](docs/features/feature-04.md),
+[architecture](docs/architecture/historical-data-adapters.md), and
+[verification evidence](docs/verification/feature-04.md).
