@@ -196,3 +196,35 @@ def test_unpersistable_json_identifiers_are_structured(identifier):
 def test_csv_nul_rejected_before_persistence():
     with pytest.raises(QualityError):
         scan(b"symbol,time,quote\nBoom export,2026-01-01T00:00:00Z,1.00\x00\n", profile())
+
+
+def test_recorded_streaming_jsonl_envelope_and_invalid_envelope_errors():
+    config = profile(
+        "stream_jsonl",
+        fields={
+            "instrument_id": "tick.symbol",
+            "event_time": "tick.time",
+            "price": "tick.quote",
+            "provider_tick_id": "tick.id",
+            "received_at_utc": "received_at",
+        },
+    )
+    valid = (
+        b'{"channel":"ticks","tick":{"symbol":"Boom export","time":"2026-01-01T00:00:00Z",'
+        b'"quote":1000.10,"id":"s-1"},"received_at":"2026-01-01T00:00:00.050000Z"}\n'
+    )
+    (row,) = scan(valid, config)
+    assert row.accepted and row.tick is not None
+    assert row.tick.source_type.value == "websocket"
+    assert row.tick.provider_tick_id == "s-1"
+    assert row.tick.received_at_utc is not None
+    assert row.raw.raw_payload == valid
+    for bad in (
+        b'{"channel":"ticks","tick":{"symbol":"Boom export","time":"2026-01-01T00:00:00Z"}}\n',
+        b'{"channel":"ticks","tick":{"symbol":"Boom export",'
+        b'"time":"2026-01-01T00:00:00Z","quote":{"nested":1}}}\n',
+        b'{"channel":"ticks","tick":{"symbol":"Boom export",'
+        b'"time":"2026-01-01T00:00:00Z","quote":1000.10},"received_at":"not-a-time"}\n',
+    ):
+        with pytest.raises(QualityError):
+            scan(bad, config)

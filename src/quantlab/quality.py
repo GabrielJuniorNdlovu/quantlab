@@ -11,6 +11,7 @@ class ErrorCode(str, Enum):
     INVALID_TIMESTAMP = "INVALID_TIMESTAMP"
     MISSING_REQUIRED_FIELD = "MISSING_REQUIRED_FIELD"
     UNSUPPORTED_INSTRUMENT = "UNSUPPORTED_INSTRUMENT"
+    INVALID_INSTRUMENT = "UNSUPPORTED_INSTRUMENT"
     OUT_OF_ORDER_EVENT = "OUT_OF_ORDER_EVENT"
     INVALID_PRECISION = "INVALID_PRECISION"
     INVALID_SOURCE_POSITION = "INVALID_SOURCE_POSITION"
@@ -80,6 +81,19 @@ class DataQualityEvent:
             )
 
 
+def redact_observed_value(value: object, *, limit: int = 64) -> str | None:
+    """Return a bounded, sanitized representation safe for diagnostics."""
+    if value is None:
+        return None
+    text = value if isinstance(value, str) else repr(value)
+    sanitized = "".join(
+        ch if ch.isprintable() and not (0xD800 <= ord(ch) <= 0xDFFF) else "?" for ch in text
+    )
+    if len(sanitized) <= limit:
+        return sanitized
+    return f"{sanitized[:limit]}...({len(text)} chars)"[:128]
+
+
 def quality_event(
     capture_id: UUID,
     source_position: int | None,
@@ -87,6 +101,7 @@ def quality_event(
     description: str,
     *,
     field_name: str | None = None,
+    observed_value: str | None = None,
     severity: Severity = Severity.ERROR,
     detected_at_utc: datetime | None = None,
 ) -> DataQualityEvent:
@@ -100,6 +115,7 @@ def quality_event(
         severity,
         description,
         field_name=field_name,
+        observed_value=observed_value,
         detected_at_utc=detected_at_utc,
     )
 

@@ -7,10 +7,11 @@ from typing import ClassVar
 from uuid import UUID
 
 from quantlab.candles import Candle
-from quantlab.models import INSTRUMENT_ID, MarketTick
+from quantlab.models import MarketTick
 from quantlab.parsing import (
-    parse_price,
     parse_timestamp,
+    require_decimal_price,
+    require_instrument_id,
     require_position,
     require_uuid,
     required_text,
@@ -39,11 +40,8 @@ class ReplayAlert:
         if self.data_cutoff_position > self.issued_at_source_position:
             raise ValueError("alert cutoff cannot reference a future observation")
         object.__setattr__(self, "issued_at_utc", parse_timestamp(self.issued_at_utc))
-        if (
-            self.instrument_id != INSTRUMENT_ID
-            or self.direction != "UP"
-            or self.alert_source != "DETERMINISTIC_FIXTURE"
-        ):
+        require_instrument_id(self.instrument_id)
+        if self.direction != "UP" or self.alert_source != "DETERMINISTIC_FIXTURE":
             raise ValueError("only Boom 1000 UP deterministic fixture alerts are supported")
         required_text(self.model_version, "model_version")
         if type(self.evaluation_horizon) is not int or not 1 <= self.evaluation_horizon <= 1000:
@@ -67,9 +65,7 @@ class IssuedAlert:
         if opened != self.alert.issued_at_utc.replace(second=0, microsecond=0):
             raise ValueError("arrow anchor must match the issuance minute")
         object.__setattr__(self, "candle_open_utc", opened)
-        if not isinstance(self.price, Decimal):
-            raise ValueError("anchor price must be Decimal")
-        parse_price(self.price)
+        require_decimal_price(self.price)
 
 
 @dataclass(frozen=True, slots=True)

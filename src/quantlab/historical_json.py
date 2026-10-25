@@ -6,8 +6,15 @@ from collections.abc import Iterator
 from decimal import Decimal, DecimalException
 from typing import BinaryIO
 
-from quantlab.models import MAX_RAW_BYTES, AcquisitionContext, RawObservation, SourceFormat
-from quantlab.quality import ErrorCode, QualityError, Severity, quality_event
+from quantlab.models import (
+    MAX_RAW_BYTES,
+    AcquisitionContext,
+    RawObservation,
+    SourceFormat,
+    SourceType,
+)
+from quantlab.parsing import parse_timestamp
+from quantlab.quality import ContractError, ErrorCode, QualityError, Severity, quality_event
 
 
 def _object(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -47,11 +54,26 @@ def strict_json(payload: bytes) -> object:
         raise ValueError("invalid UTF-8 JSON or duplicate keys") from exc
 
 
+def _extract_path(record: dict[str, object], path: str) -> tuple[bool, object]:
+    current: object = record
+    for part in path.split("."):
+        if not isinstance(current, dict) or part not in current:
+            return False, None
+        current = current[part]
+    return True, current
+
+
 def iter_json_records(
-    stream: BinaryIO, context: AcquisitionContext, columns: tuple[str, ...]
+    stream: BinaryIO,
+    context: AcquisitionContext,
+    columns: tuple[str, ...],
+    *,
+    optional_columns: tuple[str, ...] = (),
+    received_at_column: str | None = None,
 ) -> Iterator[tuple[RawObservation, dict[str, object]]]:
     position = 0
     offset = 0
+    streaming = context.source_type is SourceType.WEBSOCKET
     while payload := stream.readline(MAX_RAW_BYTES + 1):
         position += 1
 
@@ -68,12 +90,45 @@ def iter_json_records(
             fields = strict_json(payload)
         except ValueError as exc:
             raise fail(ErrorCode.INVALID_JSON, "invalid JSON line, UTF-8 or line ending") from exc
-        if not isinstance(fields, dict) or any(
-            isinstance(v, (dict, list)) for v in fields.values()
-        ):
-            raise fail(ErrorCode.INVALID_JSON_SCHEMA, "JSON line must be a flat object")
-        if not set(columns) <= fields.keys():
-            raise fail(ErrorCode.INVALID_JSON_SCHEMA, "JSON object is missing configured fields")
+        if not isinstance(fields, dict):
+            raise fail(ErrorCode.INVALID_JSON_SCHEMA, "JSON line must be an object")
+        extracted: dict[str, object] = {}
+        if streaming:
+            for col in columns:
+                found, val = _extract_path(fields, col)
+                if not found or isinstance(val, (dict, list)):
+                    raise fail(
+                        ErrorCode.INVALID_JSON_SCHEMA, "JSON object is missing configured fields"
+                    )
+                extracted[col] = val
+            for col in optional_columns:
+                found, val = _extract_path(fields, col)
+                if found:
+                    if isinstance(val, (dict, list)):
+                        raise fail(
+                            ErrorCode.INVALID_JSON_SCHEMA, "JSON optional field must be a scalar"
+                        )
+                    extracted[col] = val
+        else:
+            if any(isinstance(v, (dict, list)) for v in fields.values()):
+                raise fail(ErrorCode.INVALID_JSON_SCHEMA, "JSON line must be a flat object")
+            if not set(columns) <= fields.keys():
+                raise fail(
+                    ErrorCode.INVALID_JSON_SCHEMA, "JSON object is missing configured fields"
+                )
+            extracted = fields
+        received_at = context.received_at_utc
+        if received_at_column is not None:
+            raw_received = extracted.get(received_at_column)
+            if raw_received not in (None, ""):
+                if not isinstance(raw_received, str):
+                    raise fail(
+                        ErrorCode.INVALID_TIMESTAMP, "received_at_utc requires ISO 8601 text"
+                    )
+                try:
+                    received_at = parse_timestamp(raw_received, "received_at_utc")
+                except ContractError as exc:
+                    raise fail(exc.code, exc.description) from exc
         raw = RawObservation(
             context.capture_id,
             position,
@@ -81,7 +136,7 @@ def iter_json_records(
             SourceFormat.JSON,
             payload,
             hashlib.sha256(payload).hexdigest(),
-            context.received_at_utc,
+            received_at,
             {
                 "provider": context.source_metadata,
                 "adapter": {
@@ -92,5 +147,5 @@ def iter_json_records(
                 },
             },
         )
-        yield raw, fields
+        yield raw, extracted
         offset += len(payload)

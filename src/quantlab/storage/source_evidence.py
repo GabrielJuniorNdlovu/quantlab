@@ -20,16 +20,19 @@ def verify_complete_source(
     assert source is not None
     config = source["configuration"]
     profile = historical_profile(config) or {}
+    expected_format = {
+        "historical_csv": "csv",
+        "historical_json": "jsonl",
+        "websocket": "stream_jsonl",
+    }.get(config["source_type"])
     if profile and (
-        profile.get("version") != "historical.v1"
-        or profile.get("format")
-        != ("csv" if config["source_type"] == "historical_csv" else "jsonl")
+        profile.get("version") != "historical.v1" or profile.get("format") != expected_format
     ):
         raise StorageError("unsupported historical source profile version or format")
     json_lines = (
-        config["source_type"] == "historical_json"
+        config["source_type"] in ("historical_json", "websocket")
         and profile.get("version") == "historical.v1"
-        and profile.get("format") == "jsonl"
+        and profile.get("format") in ("jsonl", "stream_jsonl")
     )
     if config["source_type"] != "historical_csv" and not json_lines:
         raise StorageError("source completion requires a supported whole-source framing contract")

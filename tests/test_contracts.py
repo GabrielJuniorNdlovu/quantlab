@@ -9,7 +9,8 @@ from uuid import UUID
 
 import pytest
 
-from quantlab.engine import validate_acquisition, validate_tick
+from quantlab.engine import AcquisitionValidator, validate_acquisition, validate_tick
+from quantlab.historical import HistoricalAdapter, HistoricalProfile
 from quantlab.models import (
     INSTRUMENT_ID,
     AcquisitionContext,
@@ -19,7 +20,15 @@ from quantlab.models import (
     SourceType,
     TickCandidate,
 )
-from quantlab.quality import ContractError, ErrorCode, QualityError, Severity
+from quantlab.parsing import required_text
+from quantlab.quality import (
+    ContractError,
+    ErrorCode,
+    QualityError,
+    Severity,
+    quality_event,
+    redact_observed_value,
+)
 
 CAPTURE = UUID("11111111-1111-4111-8111-111111111111")
 OTHER_CAPTURE = UUID("22222222-2222-4222-8222-222222222222")
@@ -423,3 +432,146 @@ def test_foreign_capture_does_not_consume_active_acquisition_position() -> None:
     outcomes = list(validate_acquisition(observations, context()))
     assert outcomes[0].events[0].error_code is ErrorCode.INVALID_SOURCE_METADATA
     assert outcomes[1].accepted
+
+
+def test_invalid_instrument_error_code_alias_and_observed_value_redaction() -> None:
+    assert ErrorCode.INVALID_INSTRUMENT is ErrorCode.UNSUPPORTED_INSTRUMENT
+    outcome = validate_tick(candidate(instrument_id="CRASH_1000"), context())
+    assert outcome.events[0].error_code is ErrorCode.INVALID_INSTRUMENT
+    assert redact_observed_value(None) is None
+    redacted = redact_observed_value("bad\x00\n\ud800-" + ("x" * 200))
+    assert redacted is not None
+    assert "\x00" not in redacted and "\n" not in redacted and "\ud800" not in redacted
+    assert len(redacted) <= 128
+    event = quality_event(
+        CAPTURE,
+        1,
+        ErrorCode.INVALID_PRICE,
+        "price must be a finite positive decimal",
+        field_name="price",
+        observed_value=redacted,
+    )
+    assert event.observed_value == redacted
+
+
+@pytest.mark.parametrize("bad_text", ["abc\x00def", "abc\ud800def"])
+def test_required_text_rejects_nul_and_lone_surrogates_centrally(bad_text: str) -> None:
+    with pytest.raises(ContractError) as error:
+        required_text(bad_text, "provider")
+    assert error.value.code is ErrorCode.INVALID_SOURCE_METADATA
+
+
+def test_acquisition_validator_incremental_state_matches_validate_acquisition() -> None:
+    ctx = context()
+    validator = AcquisitionValidator(ctx, detected_at_utc=DETECTED)
+    items = [candidate(1), candidate(2, event_time="2025-12-31T23:59:59Z"), candidate(3)]
+    incremental = [validator.validate(item) for item in items]
+    validator.finish()
+    batch = list(validate_acquisition(items, ctx, detected_at_utc=DETECTED))
+    assert incremental == batch
+    empty_validator = AcquisitionValidator(ctx)
+    with pytest.raises(QualityError) as error:
+        empty_validator.finish()
+    assert error.value.event.error_code is ErrorCode.EMPTY_DATASET
+
+
+def test_historical_csv_historical_json_and_recorded_streaming_json_canonical_equivalence() -> None:
+    from io import BytesIO
+
+    base_profile = {
+        "version": "historical.v1",
+        "provider": "fixture-provider",
+        "provider_symbol": "fixture-boom-1000",
+        "pip_size": 2,
+        "timestamp": "iso8601",
+        "instruments": {"Boom 1000": "BOOM_1000"},
+    }
+    csv_adapter = HistoricalAdapter(
+        HistoricalProfile.from_mapping(
+            {
+                **base_profile,
+                "format": "csv",
+                "fields": {
+                    "instrument_id": "symbol",
+                    "event_time": "time",
+                    "price": "quote",
+                    "provider_tick_id": "id",
+                },
+            }
+        )
+    )
+    json_adapter = HistoricalAdapter(
+        HistoricalProfile.from_mapping(
+            {
+                **base_profile,
+                "format": "jsonl",
+                "fields": {
+                    "instrument_id": "symbol",
+                    "event_time": "time",
+                    "price": "quote",
+                    "provider_tick_id": "id",
+                },
+            }
+        )
+    )
+    stream_adapter = HistoricalAdapter(
+        HistoricalProfile.from_mapping(
+            {
+                **base_profile,
+                "format": "stream_jsonl",
+                "fields": {
+                    "instrument_id": "tick.symbol",
+                    "event_time": "tick.time",
+                    "price": "tick.quote",
+                    "provider_tick_id": "tick.id",
+                    "received_at_utc": "received_at",
+                },
+            }
+        )
+    )
+    csv_payload = (
+        b"symbol,time,quote,id\n"
+        b"Boom 1000,2026-01-01T02:00:00+02:00,1000.10,t-1\n"
+        b"Boom 1000,2026-01-01T00:00:00Z,1000.10,t-2\n"
+        b"Boom 1000,2025-12-31T19:00:01.250000-05:00,1012.50,\n"
+    )
+    json_payload = (
+        b'{"symbol":"Boom 1000","time":"2026-01-01T00:00:00Z","quote":1000.10,"id":"t-1"}\n'
+        b'{"symbol":"Boom 1000","time":"2026-01-01T02:00:00+02:00","quote":"1000.10","id":"t-2"}\n'
+        b'{"symbol":"Boom 1000","time":"2026-01-01T00:00:01.250000Z","quote":1012.50}\n'
+    )
+    stream_payload = (
+        b'{"channel":"ticks","tick":{"symbol":"Boom 1000","time":"2025-12-31T19:00:00-05:00",'
+        b'"quote":"1000.10","id":"stream-1"},"received_at":"2026-01-01T00:00:00.050000Z"}\n'
+        b'{"channel":"ticks","tick":{"symbol":"Boom 1000","time":"2026-01-01T00:00:00Z",'
+        b'"quote":1000.10,"id":"stream-2"},"received_at":"2026-01-01T00:00:00.060000Z"}\n'
+        b'{"channel":"ticks","tick":{"symbol":"Boom 1000",'
+        b'"time":"2026-01-01T02:00:01.250000+02:00",'
+        b'"quote":1012.50},"received_at":"2026-01-01T00:00:01.300000Z"}\n'
+    )
+
+    def run_adapter(adapter: HistoricalAdapter, payload: bytes) -> list[MarketTick]:
+        ctx = adapter.context()
+        outcomes = list(validate_acquisition(adapter.candidates(BytesIO(payload), ctx), ctx))
+        assert all(outcome.accepted and outcome.tick is not None for outcome in outcomes)
+        return [outcome.tick for outcome in outcomes if outcome.tick is not None]
+
+    csv_ticks = run_adapter(csv_adapter, csv_payload)
+    json_ticks = run_adapter(json_adapter, json_payload)
+    stream_ticks = run_adapter(stream_adapter, stream_payload)
+
+    assert len(csv_ticks) == len(json_ticks) == len(stream_ticks) == 3
+    for csv_tick, json_tick, stream_tick in zip(csv_ticks, json_ticks, stream_ticks, strict=True):
+        assert csv_tick.market_fields() == json_tick.market_fields() == stream_tick.market_fields()
+        assert csv_tick.equivalent_market_fields(json_tick)
+        assert csv_tick.equivalent_market_fields(stream_tick)
+        assert csv_tick.source_type is SourceType.HISTORICAL_CSV
+        assert json_tick.source_type is SourceType.HISTORICAL_JSON
+        assert stream_tick.source_type is SourceType.WEBSOCKET
+        assert csv_tick.received_at_utc is None
+        assert json_tick.received_at_utc is None
+        assert stream_tick.received_at_utc is not None
+        assert len({csv_tick.capture_id, json_tick.capture_id, stream_tick.capture_id}) == 3
+    assert not csv_ticks[0].equivalent_market_fields(
+        replace(csv_ticks[0], price=Decimal("1000.1"), pip_size=2)
+    )

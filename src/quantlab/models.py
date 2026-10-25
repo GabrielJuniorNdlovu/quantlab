@@ -11,9 +11,13 @@ from uuid import UUID
 
 from quantlab.metadata import MetadataValue, freeze_metadata
 from quantlab.parsing import (
+    INSTRUMENT_ID as INSTRUMENT_ID,
+)
+from quantlab.parsing import (
     parse_pip_size,
-    parse_price,
     parse_timestamp,
+    require_decimal_price,
+    require_instrument_id,
     require_position,
     require_price_precision,
     require_uuid,
@@ -22,7 +26,6 @@ from quantlab.parsing import (
 from quantlab.quality import ContractError, DataQualityEvent, ErrorCode, Severity
 
 INSTRUMENT = "Boom 1000 Index"
-INSTRUMENT_ID = "BOOM_1000"
 MAX_RAW_BYTES = 65536
 
 
@@ -30,6 +33,10 @@ class SourceType(str, Enum):
     HISTORICAL_CSV = "historical_csv"
     HISTORICAL_JSON = "historical_json"
     WEBSOCKET = "websocket"
+
+    @property
+    def expected_format(self) -> "SourceFormat":
+        return SourceFormat.CSV if self is SourceType.HISTORICAL_CSV else SourceFormat.JSON
 
 
 class SourceFormat(str, Enum):
@@ -143,11 +150,7 @@ class MarketTick:
     provider_tick_id: str | None = None
 
     def __post_init__(self) -> None:
-        required_text(self.instrument_id, "instrument_id")
-        if self.instrument_id != INSTRUMENT_ID:
-            raise ContractError(
-                ErrorCode.UNSUPPORTED_INSTRUMENT, "instrument_id", "unsupported instrument"
-            )
+        require_instrument_id(self.instrument_id)
         required_text(self.provider_symbol, "provider_symbol")
         require_uuid(self.capture_id)
         require_position(self.source_position)
@@ -155,9 +158,7 @@ class MarketTick:
             raise ContractError(
                 ErrorCode.INVALID_SOURCE_METADATA, "source_type", "unsupported source_type"
             )
-        if not isinstance(self.price, Decimal):
-            raise ContractError(ErrorCode.INVALID_PRICE, "price", "canonical price must be Decimal")
-        parse_price(self.price)
+        require_decimal_price(self.price)
         if type(self.pip_size) is not int:
             raise ContractError(
                 ErrorCode.INVALID_PRECISION, "pip_size", "canonical pip_size must be an integer"
@@ -176,6 +177,22 @@ class MarketTick:
             )
         if self.provider_tick_id is not None:
             required_text(self.provider_tick_id, "provider_tick_id")
+
+    def market_fields(
+        self,
+    ) -> tuple[str, str, datetime, tuple[int, tuple[int, ...], int | str], int]:
+        """Return canonical market fields independent of transport provenance."""
+        return (
+            self.instrument_id,
+            self.provider_symbol,
+            self.event_time_utc,
+            self.price.as_tuple(),
+            self.pip_size,
+        )
+
+    def equivalent_market_fields(self, other: object) -> bool:
+        """Compare canonical market fields (including exact Decimal scale) across sources."""
+        return isinstance(other, MarketTick) and self.market_fields() == other.market_fields()
 
 
 @dataclass(frozen=True, slots=True)
