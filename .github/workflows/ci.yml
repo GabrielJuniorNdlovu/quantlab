@@ -25,6 +25,29 @@ jobs:
       - run: python -m ruff check .
       - run: python -m ruff format --check .
       - run: python -m mypy
+      - name: Configure isolated storage test database
+        run: |
+          python - <<'PYTHON'
+          import os
+          import secrets
+          from pathlib import Path
+          password = secrets.token_hex(24)
+          url = f"postgresql://quantlab:{password}@127.0.0.1:15432/quantlab_ci"
+          Path(".env.ci").write_text(
+              f"POSTGRES_USER=quantlab\nPOSTGRES_DB=quantlab_ci\n"
+              f"POSTGRES_PASSWORD={password}\nQUANTLAB_DB_PORT=15432\n"
+          )
+          os.chmod(".env.ci", 0o600)
+          with open(os.environ["GITHUB_ENV"], "a") as environment:
+              environment.write(f"QUANTLAB_TEST_DATABASE_URL={url}\n")
+              environment.write(f"QUANTLAB_DATABASE_URL={url}\n")
+          print(f"::add-mask::{password}")
+          print(f"::add-mask::{url}")
+          PYTHON
+      - name: Start PostgreSQL and TimescaleDB
+        run: docker compose --env-file .env.ci -p quantlab-ci up -d --wait
+      - name: Apply packaged migrations
+        run: python -m quantlab db init
       - run: python -m pytest --cov=quantlab --cov-branch --cov-report=term-missing
       - name: Install virtual display for native chart checks
         if: matrix.python-version == '3.14'
@@ -34,3 +57,16 @@ jobs:
         env:
           QUANTLAB_GUI_TEST: '1'
         run: xvfb-run -a python -m pytest -q tests/test_chart.py tests/test_replay_gui.py
+      - name: Exercise crash recovery and backup restore
+        if: matrix.python-version == '3.14'
+        env:
+          QUANTLAB_DESTRUCTIVE_TESTS: '1'
+          QUANTLAB_TEST_COMPOSE_PROJECT: quantlab-ci
+          QUANTLAB_TEST_COMPOSE_ENV: .env.ci
+        run: python -m pytest -q tests/test_storage_failures.py
+      - name: Stop isolated database
+        if: always()
+        run: |
+          if [ -f .env.ci ]; then
+            docker compose --env-file .env.ci -p quantlab-ci down
+          fi

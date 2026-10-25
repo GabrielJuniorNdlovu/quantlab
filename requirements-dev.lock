@@ -1,3 +1,4 @@
+-r requirements-storage.lock
 ast_serialize==0.13.1
 coverage==7.17.0
 hypothesis==6.170.9

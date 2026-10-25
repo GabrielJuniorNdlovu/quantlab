@@ -1,0 +1,36 @@
+         1805295 function calls (1709238 primitive calls) in 8.218 seconds
+
+   Ordered by: internal time
+   List reduced from 431 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+     4216    5.938    0.001    6.606    0.002 connection.py:479(wait)
+72000/4000    0.166    0.000    0.435    0.000 mapping.py:17(wire_value)
+   543584    0.156    0.000    0.246    0.000 {built-in method builtins.isinstance}
+     4119    0.108    0.000    0.196    0.000 _queries.py:94(dump)
+     8239    0.106    0.000    0.293    0.000 _cursor_base.py:275(_maybe_prepare_gen)
+        2    0.103    0.052    0.103    0.052 {built-in method posix.fsync}
+30001/2001    0.103    0.000    0.165    0.000 metadata.py:16(_freeze)
+     4065    0.092    0.000    0.092    0.000 _cursor_base.py:583(_send_query_prepared)
+     4024    0.064    0.000    0.065    0.000 encoder.py:207(iterencode)
+     2000    0.052    0.000    5.242    0.003 repository.py:350(_insert_outcome)
+       35    0.050    0.001    0.050    0.001 _connection_base.py:436(_connect_gen)
+     2001    0.048    0.000    0.347    0.000 csv_adapter.py:52(iter_csv_candidates)
+    74654    0.041    0.000    0.068    0.000 {built-in method _abc._abc_instancecheck}
+       30    0.040    0.001    0.040    0.001 {method 'poll' of 'select.epoll' objects}
+     6300    0.040    0.000    0.078    0.000 parsing.py:31(parse_price)
+    46000    0.033    0.000    0.049    0.000 dataclasses.py:1468(is_dataclass)
+     4300    0.032    0.000    0.139    0.000 models.py:145(__post_init__)
+    74654    0.028    0.000    0.096    0.000 <frozen abc>:117(__instancecheck__)
+    97817    0.027    0.000    0.027    0.000 {built-in method builtins.len}
+     2000    0.027    0.000    0.222    0.000 engine.py:49(validate_tick)
+     6302    0.025    0.000    0.048    0.000 parsing.py:57(parse_timestamp)
+     8243    0.025    0.000    0.594    0.000 _cursor_base.py:195(_execute_gen)
+    14603    0.024    0.000    0.037    0.000 parsing.py:20(required_text)
+     4119    0.023    0.000    0.042    0.000 _cursor_base.py:504(_select_current_result)
+     4119    0.023    0.000    0.050    0.000 _cursor_base.py:61(__init__)
+     2000    0.022    0.000    0.032    0.000 repository.py:292(_validate)
+     6001    0.021    0.000    0.021    0.000 {method 'fullmatch' of 're.Pattern' objects}
+     6000    0.019    0.000    0.030    0.000 dataclasses.py:1445(fields)
+     4119    0.018    0.000    0.242    0.000 _queries.py:59(convert)
+     4123    0.017    0.000    0.023    0.000 _cursor_base.py:374(_start_query)

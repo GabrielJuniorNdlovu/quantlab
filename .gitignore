@@ -14,3 +14,11 @@ dist/
 .coverage
 htmlcov/
 replay-runs/
+
+# Local storage configuration and durable runtime artifacts
+.env
+.env.*
+!.env.example
+raw-archive/
+.pgdata/
+.storage-test/
