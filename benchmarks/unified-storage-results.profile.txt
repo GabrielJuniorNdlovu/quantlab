@@ -1,0 +1,31 @@
+         859554 function calls (811501 primitive calls) in 8.385 seconds
+
+   Ordered by: internal time
+   List reduced from 468 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      110    6.774    0.062    6.838    0.062 connection.py:479(wait)
+        2    0.676    0.338    0.676    0.338 {built-in method posix.fsync}
+       77    0.128    0.002    0.129    0.002 _connection_base.py:436(_connect_gen)
+       66    0.092    0.001    0.092    0.001 {method 'poll' of 'select.epoll' objects}
+36000/2000    0.077    0.000    0.203    0.000 mapping.py:17(wire_value)
+   283933    0.069    0.000    0.108    0.000 {built-in method builtins.isinstance}
+15001/1001    0.036    0.000    0.058    0.000 metadata.py:16(_freeze)
+     2005    0.026    0.000    0.026    0.000 encoder.py:207(iterencode)
+        5    0.025    0.005    0.025    0.005 {built-in method posix.open}
+     4501    0.020    0.000    0.040    0.000 parsing.py:53(parse_price)
+     3501    0.018    0.000    0.097    0.000 models.py:152(__post_init__)
+    38804    0.018    0.000    0.029    0.000 {built-in method _abc._abc_instancecheck}
+     2000    0.017    0.000    0.034    0.000 _copy_base.py:225(write_row)
+    10005    0.017    0.000    0.027    0.000 parsing.py:21(required_text)
+    23000    0.016    0.000    0.023    0.000 dataclasses.py:1468(is_dataclass)
+     1001    0.013    0.000    0.116    0.000 csv_adapter.py:54(iter_csv_records)
+    38804    0.013    0.000    0.042    0.000 <frozen abc>:117(__instancecheck__)
+     4511    0.011    0.000    0.021    0.000 parsing.py:79(parse_timestamp)
+    46971    0.010    0.000    0.010    0.000 {built-in method builtins.len}
+     1000    0.009    0.000    0.082    0.000 engine.py:126(validate_tick)
+     3000    0.009    0.000    0.014    0.000 dataclasses.py:1445(fields)
+     8002    0.009    0.000    0.015    0.000 {method 'as_tuple' of 'decimal.Decimal' objects}
+      118    0.008    0.000    0.047    0.000 _server_cursor_base.py:165(_fetch_gen)
+    21252    0.007    0.000    0.007    0.000 {method 'encode' of 'str' objects}
+     2501    0.007    0.000    0.082    0.000 mapping.py:51(tick_row)

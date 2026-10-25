@@ -61,6 +61,15 @@ def test_import_status_replay_and_structured_diagnostics(tmp_path):
     assert all(env["QUANTLAB_DATABASE_URL"] not in line for line in result.stderr.splitlines())
     result = invoke("ingest", "status", manifest["dataset_id"], env=env)
     assert result.returncode == 0 and json.loads(result.stdout)["accepted"] == 34
+    progress = invoke("ingest", "status", manifest["dataset_id"], "--attempts", env=env)
+    assert progress.returncode == 0, progress.stderr
+    attempts = json.loads(progress.stdout)
+    assert len(attempts) == 1 and attempts[0]["observed"] == 34
+    assert attempts[0]["source_position"] == 35 and attempts[0]["status"] == "COMPLETE"
+    health = invoke("db", "status", env=env)
+    assert health.returncode == 0, health.stderr
+    assert json.loads(health.stdout)["database"] == "connected"
+    assert json.loads(health.stdout)["storage"]["market_total_bytes"] > 0
     replay = invoke("replay", manifest["dataset_id"], "--limit", "3", env=env)
     rows = [json.loads(line) for line in replay.stdout.splitlines()]
     assert replay.returncode == 0 and len(rows) == 3

@@ -113,7 +113,7 @@ def validate_dataset(dsn: str, dataset_id: UUID, archive: SourceArchive) -> dict
                     or outcome.raw.raw_payload != bytes(row["raw_payload"])
                     or outcome.raw.payload_sha256 != row["payload_sha256"]
                     or wire_value(outcome.raw.source_metadata) != row["source_metadata"]
-                    or outcome.tick != tick_row(row)
+                    or wire_value(outcome.tick) != wire_value(tick_row(row))
                 ):
                     raise StorageError("source revalidation differs from committed evidence")
                 for event in sorted(outcome.events, key=lambda e: e.event_id):

@@ -115,9 +115,10 @@ published for replay. These guarantees do not imply exactly-once live delivery.
 Stop with `docker compose down` to retain the named volume. Back up both the
 database and raw archive; deleting the volume or archive loses research evidence.
 Read the [Feature 03 operations guide](docs/features/feature-03.md),
+[unified storage design](docs/architecture/market-data-storage.md),
 [storage architecture](docs/architecture/time-series-storage.md),
 [database decision](docs/adr/ADR-003-time-series-database.md), and
-[verification evidence](docs/verification/feature-03.md) before recovery or deployment.
+[verification evidence](docs/reviews/feature-03-implementation-review.md) before recovery or deployment.
 
 ## Validate the legacy CSV fixtures
 

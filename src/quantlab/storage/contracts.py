@@ -5,6 +5,7 @@ import json
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -55,6 +56,24 @@ class DatasetManifest:
     accepted: int
     rejected: int
     error_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class CommitStatus:
+    """Durable database truth; acquisition replay/acknowledgement belongs to F04."""
+
+    dataset_id: UUID
+    capture_id: UUID
+    status: str
+    batch_number: int
+    source_position: int
+    observed: int
+    accepted: int
+    rejected: int
+    error_count: int
+    last_event_time_utc: datetime | None
+    committed_at_utc: datetime | None
+    digest: str | None
 
 
 @dataclass(frozen=True, slots=True)

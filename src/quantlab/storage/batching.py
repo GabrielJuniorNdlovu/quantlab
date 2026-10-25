@@ -26,6 +26,11 @@ class BatchMetrics:
     queued: int
     buffered: int
     queue_high_water: int
+    rejected: int = 0
+    quality_events: int = 0
+    failures: int = 0
+    last_commit_latency_seconds: float | None = None
+    state: str = "OPEN"
 
 
 class BatchWriter:
@@ -55,6 +60,8 @@ class BatchWriter:
         self._failure: BaseException | None = None
         self._submitted = self._committed = self._batches = self._high_water = 0
         self._buffered = 0
+        self._rejected = self._quality_events = self._failures = 0
+        self._last_latency: float | None = None
         self._worker = Thread(target=self._run, name="quantlab-batch-writer", daemon=True)
         self._worker.start()
 
@@ -68,6 +75,17 @@ class BatchWriter:
                 len(self._queue),
                 self._buffered,
                 self._high_water,
+                self._rejected,
+                self._quality_events,
+                self._failures,
+                self._last_latency,
+                "FAILED"
+                if self._failure is not None
+                else "CLOSED"
+                if self._closing and not self._worker.is_alive()
+                else "CLOSING"
+                if self._closing
+                else "OPEN",
             )
 
     def _raise_failed(self) -> None:
@@ -118,6 +136,10 @@ class BatchWriter:
             "queue_capacity": self._policy.queue_capacity,
             "queue_high_water": metrics.queue_high_water,
             "commit_latency_seconds": latency,
+            "rejected": metrics.rejected,
+            "quality_events": metrics.quality_events,
+            "failures": metrics.failures,
+            "state": metrics.state,
         }
         if failure is not None:
             values["exception_type"] = type(failure).__name__
@@ -158,6 +180,9 @@ class BatchWriter:
                     with self._condition:
                         self._committed += len(pending)
                         self._batches += 1
+                        self._rejected += sum(outcome.tick is None for outcome in pending)
+                        self._quality_events += sum(len(outcome.events) for outcome in pending)
+                        self._last_latency = latency
                         self._buffered = 0
                     capture_id = str(pending[0].raw.capture_id)
                     pending.clear()
@@ -169,6 +194,7 @@ class BatchWriter:
         except BaseException as exc:
             with self._condition:
                 self._failure = exc
+                self._failures += 1
                 self._condition.notify_all()
             self._log(
                 "batch_failed",

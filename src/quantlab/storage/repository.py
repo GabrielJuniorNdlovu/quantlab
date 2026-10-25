@@ -20,9 +20,12 @@ from quantlab.models import (
     ValidationOutcome,
 )
 from quantlab.quality import DataQualityEvent, Severity
+from quantlab.storage import queries
+from quantlab.storage.bulk import insert_batch
 from quantlab.storage.contracts import (
     ArchivedSource,
     BusyImport,
+    CommitStatus,
     DatasetManifest,
     ImportRun,
     RetryPolicy,
@@ -30,9 +33,9 @@ from quantlab.storage.contracts import (
     configuration,
     configuration_hash,
 )
-from quantlab.storage.mapping import batch_digest, manifest_row, wire_value
+from quantlab.storage.mapping import batch_digest, manifest_row
 from quantlab.storage.migration_runner import migrate as migrate
-from quantlab.storage.replay_repository import tick_factory
+from quantlab.storage.replay_repository import observation, tick_factory
 from quantlab.storage.source_evidence import verify_complete_source
 
 if TYPE_CHECKING:
@@ -261,7 +264,7 @@ class Repository:
                     errors += sum(
                         event.severity is not Severity.WARNING for event in outcome.events
                     )
-                    self._insert_outcome(connection, outcome)
+                insert_batch(connection, outcomes)
                 connection.execute(
                     """INSERT INTO ingestion_batches(capture_id,batch_number,digest,
                  first_position,last_position,observation_count) VALUES(%s,%s,%s,%s,%s,%s)""",
@@ -346,49 +349,6 @@ class Repository:
                 event.detected_at_utc,
             ),
         )
-
-    @classmethod
-    def _insert_outcome(
-        cls, connection: psycopg.Connection[dict[str, Any]], outcome: ValidationOutcome
-    ) -> None:
-        raw, tick = outcome.raw, outcome.tick
-        connection.execute(
-            """INSERT INTO raw_observations(capture_id,source_position,provider,
-         source_format,raw_payload,payload_sha256,received_at_utc,source_metadata,accepted_at)
-         VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-            (
-                raw.capture_id,
-                raw.source_position,
-                raw.provider,
-                raw.source_format.value,
-                raw.raw_payload,
-                raw.payload_sha256,
-                raw.received_at_utc,
-                Jsonb(wire_value(raw.source_metadata)),
-                tick.event_time_utc if tick else None,
-            ),
-        )
-        if tick is not None:
-            connection.execute(
-                """INSERT INTO market_ticks(instrument_id,provider_symbol,event_time_utc,
-             price,price_text,pip_size,source_type,capture_id,source_position,received_at_utc,provider_tick_id)
-             VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                (
-                    tick.instrument_id,
-                    tick.provider_symbol,
-                    tick.event_time_utc,
-                    tick.price,
-                    str(tick.price),
-                    tick.pip_size,
-                    tick.source_type.value,
-                    tick.capture_id,
-                    tick.source_position,
-                    tick.received_at_utc,
-                    tick.provider_tick_id,
-                ),
-            )
-        for event in outcome.events:
-            cls._insert_event(connection, event)
 
     def finish(self, run: ImportRun) -> DatasetManifest:
         self._require_claim(run)
@@ -487,6 +447,18 @@ class Repository:
             ).fetchall()
         )
         return tuple(manifest_row(row) for row in rows)
+
+    def commit_status(self, capture_id: UUID) -> CommitStatus:
+        return queries.commit_status(self.dsn, capture_id)
+
+    def acquisitions(self, dataset_id: UUID, *, limit: int = 100) -> tuple[CommitStatus, ...]:
+        return queries.acquisitions(self.dsn, dataset_id, limit)
+
+    def observation(self, dataset_id: UUID, *, source_position: int) -> MarketTick | None:
+        return observation(self.dsn, dataset_id, source_position)
+
+    def storage_usage(self) -> dict[str, int]:
+        return queries.storage_usage(self.dsn)
 
     def tick_factory(
         self,

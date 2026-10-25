@@ -185,16 +185,14 @@ confirmed Critical/Major/Minor implementation findings were fixed and rechecked.
 
 ## Performance
 
-[Raw measurements, method, ranges, resource use, and limitations](../../benchmarks/storage-results.md)
-cover five interleaved rounds for batch sizes 1/100/500/1000, validation,
-transaction duration, replay/range queries, queue utilization, database growth,
-and separate memory/profiling runs. Default-batch ingestion measured a median
-255.82 observations/s; batch 1000 measured 355.81 observations/s with an overlapping
-range against batch 500. The 100,000-row memory run peaked at 2.30 MiB of traced
-Python allocations and about 75.24 MiB whole-client high-water RSS. Both runtime
-and benchmark source hashes match the final files. Benchmarks retain their engineering input
-and source archive under ignored `.storage-test/`; no generated dataset is
-committed. These are local engineering measurements, not production SLOs.
+[Earlier raw measurements](../../benchmarks/storage-results.md) describe the
+initial Feature 03 implementation. The unified batch and scale measurements for
+this refactor are in the
+[current benchmark report](../../benchmarks/unified-storage-results.md), with
+per-run results in its JSON companion. It compares five interleaved 100,000-row
+rounds and separately runs 1,000,000 and 2,000,000 rows. The benchmark asserts
+source hashes, persisted counts, exact values, replay, range queries, and exact
+lookups. Results are local engineering evidence, not production SLOs.
 
 ## Remaining boundaries and completion
 
