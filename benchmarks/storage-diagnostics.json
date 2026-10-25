@@ -1,0 +1,38 @@
+[
+  {
+    "sampled_at_utc": "2026-10-25T00:06:07.700888+00:00",
+    "acquisitions": 6,
+    "committed_observations": 11530,
+    "completed_acquisitions": 5,
+    "database_wait_states": [
+      [
+        "active",
+        "IO",
+        "WalSync"
+      ],
+      [
+        "idle",
+        "Extension",
+        "Extension"
+      ]
+    ]
+  },
+  {
+    "sampled_at_utc": "2026-10-25T00:19:02.709620+00:00",
+    "acquisitions": 27,
+    "committed_observations": 88500,
+    "completed_acquisitions": 26,
+    "database_wait_states": [
+      [
+        "idle in transaction",
+        "Client",
+        "ClientRead"
+      ],
+      [
+        "idle",
+        "Extension",
+        "Extension"
+      ]
+    ]
+  }
+]

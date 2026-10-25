@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: timescale/timescaledb:2.31.0-pg18@sha256:0fcff5761363809d1242f2261a3482197b5a5337407f8b97a976fb174206d579
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-quantlab}
+      POSTGRES_DB: ${POSTGRES_DB:-quantlab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in an ignored environment file}
+    ports:
+      - "127.0.0.1:${QUANTLAB_DB_PORT:-15432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=timescaledb
+      - -c
+      - timescaledb.telemetry_level=off
+      - -c
+      - fsync=on
+      - -c
+      - synchronous_commit=on
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  pgdata:

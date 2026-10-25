@@ -4,7 +4,9 @@ QuantLab validates local historical data for offline research on Boom 1000 Index
 Feature 01 separates exact source evidence from canonical `market_tick.v1` ticks
 and structured quality events. The single-instrument scope keeps the data
 contract precise. Feature 02 adds deterministic offline replay, M1 candlesticks,
-fixed fixture-alert arrows, and an independently inspectable audit log.
+fixed fixture-alert arrows, and an independently inspectable audit log. Feature 03
+adds transactional PostgreSQL/TimescaleDB ingestion, original-source archival,
+recoverable import attempts, and completed-dataset replay.
 
 The implementation supports local CSV files. It requires no market credentials
 or network connection at runtime. The supplied fixtures are deterministic
@@ -23,12 +25,15 @@ python -m pip install --no-build-isolation --no-deps -e .
 
 On Ubuntu, install the OS `python3-venv` package if environment creation fails.
 Dependency installation needs a package index or an available local cache.
-Validation and tests run offline. Runtime dependencies are standard-library only.
+Validation and replay run offline. Their runtime dependencies are standard-library
+only. The optional storage extra adds psycopg and Alembic and connects to your
+configured PostgreSQL instance. Storage integration tests require a local database.
 `requirements-dev.lock` records the tested development-tool versions. The
 project's development extra declares the supported tool set.
 
 GitHub Actions runs the checks on Python 3.11 and 3.14 when the branch is pushed.
-Local verification used Python 3.14.4. Hosted CI for Feature 02 runs after your manual push.
+Local verification uses Python 3.14.4. Hosted Feature 03 checks run after your
+manual push and include real TimescaleDB integration and recovery tests.
 
 ## Run the arrow replay
 
@@ -67,6 +72,51 @@ See the [Feature 02 guide](docs/features/feature-02.md),
 [actual desktop capture](docs/features/replay-issued.png).
 The [MT5 prototype](integrations/mt5/README.md) remains uncompiled and unverified
 in a native terminal.
+
+## Import durable historical datasets
+
+Install the tested storage dependencies and the operational entry point:
+
+```bash
+python -m pip install -r requirements-storage.lock
+python -m pip install --no-build-isolation --no-deps -e ".[storage]"
+```
+
+Create an ignored `.env` from [.env.example](.env.example), choose a local database
+password, and set the matching `QUANTLAB_DATABASE_URL`. Docker Compose supplies a
+pinned TimescaleDB 2.31.0/PostgreSQL 18 image, a persistent volume, a TCP health
+check, and a localhost-only port. It requires Docker Engine and Docker Compose.
+
+```bash
+docker compose up -d --wait
+set -a
+source .env
+set +a
+quantlab db init
+quantlab ingest import src/quantlab/data/replay_demo.csv \
+	--provider engineering-fixture --provider-symbol fixture-symbol --pip-size 2
+quantlab ingest datasets
+quantlab ingest status
+quantlab replay DATASET_UUID --limit 100
+```
+
+`python -m quantlab` provides the same commands. Substitute the dataset UUID from
+the import result. Optional `--start` and `--end` timestamps select a UTC range
+with an inclusive start and exclusive end. A replay selects one completed
+acquisition and preserves equal-time observations in source-position order.
+
+The importer archives complete original bytes before processing bounded batches.
+Repeating identical bytes and source configuration returns the existing completed
+dataset. Repeating an interrupted import starts a new acquisition from those
+bytes, preserving the earlier attempt. Rejected or interrupted imports are never
+published for replay. These guarantees do not imply exactly-once live delivery.
+
+Stop with `docker compose down` to retain the named volume. Back up both the
+database and raw archive; deleting the volume or archive loses research evidence.
+Read the [Feature 03 operations guide](docs/features/feature-03.md),
+[storage architecture](docs/architecture/time-series-storage.md),
+[database decision](docs/adr/ADR-003-time-series-database.md), and
+[verification evidence](docs/verification/feature-03.md) before recovery or deployment.
 
 ## Validate the legacy CSV fixtures
 
@@ -190,12 +240,11 @@ defines fields, invariants, precision, ordering, errors, bounds, and compatibili
 architecture alternatives, and selected ownership boundaries.
 
 Current limits include microsecond timestamp resolution, explicit input-size
-caps, caller responsibility for provider mapping authenticity, and no durable
-raw archive. Passing validation establishes the documented data contract; it
+caps, and caller responsibility for provider mapping authenticity. Feature 03
+provides durable raw archival; protect and back up that directory with the database. Passing validation establishes the documented data contract; it
 does not establish source authenticity, complete market coverage, or predictive
 ability.
 
-Feature 02 consumes these same canonical ticks through a resettable iterator
-factory. See its architecture guide for the Feature 03 storage integration
-requirements. QuantLab includes no broker connection, account authentication,
+Feature 03 exposes a resettable factory of these same canonical ticks for
+Feature 02. It does not merge overlapping acquisitions automatically. QuantLab includes no broker connection, account authentication,
 order execution, or learned prediction model.

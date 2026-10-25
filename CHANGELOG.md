@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+- Add PostgreSQL/TimescaleDB storage with additive packaged Alembic migrations.
+- Preserve full original sources and exact raw observations with SHA-256 evidence.
+- Persist canonical ticks, quality events, batch receipts, and progress atomically.
+- Publish completed datasets and retain interrupted attempts during restart recovery.
+- Add bounded event batching, idle deadlines, backpressure, retries, and JSON diagnostics.
+- Provide operational commands and bounded completed-dataset replay factories.
+- Add pinned Docker Compose deployment, database/failure tests, benchmarks, and runbooks.
+
 ## 0.3.0
 
 - Add explicit-clock historical replay over the existing canonical tick contract.

@@ -4,19 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quantlab"
-version = "0.3.0"
+version = "0.4.0"
 description = "Local market data integrity checks for Boom 1000 Index research"
 requires-python = ">=3.11"
 dependencies = []
 
+[project.scripts]
+quantlab = "quantlab.storage_cli:main"
+
 [project.optional-dependencies]
+storage = ["psycopg[binary]>=3.3.6,<3.4", "alembic>=1.20.1,<1.21"]
 dev = ["pytest>=8", "pytest-cov>=6", "hypothesis>=6", "ruff>=0.17", "mypy>=1.15"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-quantlab = ["py.typed", "data/*.csv"]
+quantlab = ["py.typed", "data/*.csv", "storage/migrations/*.py", "storage/migrations/versions/*.py", "storage/migrations/*.mako"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
