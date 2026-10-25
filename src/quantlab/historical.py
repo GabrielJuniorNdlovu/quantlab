@@ -2,21 +2,25 @@
 
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
-from decimal import Decimal
 from pathlib import Path
 from typing import BinaryIO
 from uuid import UUID, uuid4
 
 from quantlab.csv_adapter import iter_csv_records
-from quantlab.engine import validate_acquisition
+from quantlab.engine import normalize_mapped_record, validate_acquisition
 from quantlab.historical_json import iter_json_records, strict_json
 from quantlab.metadata import MetadataValue, freeze_metadata
 from quantlab.models import AcquisitionContext, SourceType, TickCandidate
-from quantlab.parsing import parse_pip_size, required_text
+from quantlab.parsing import parse_pip_size, require_instrument_id, required_text
 
 _VERSION = "historical.v1"
 _REQUIRED = {"instrument_id", "event_time", "price"}
-_OPTIONAL = {"provider_symbol", "pip_size", "provider_tick_id"}
+_OPTIONAL = {"provider_symbol", "pip_size", "provider_tick_id", "received_at_utc"}
+_FORMATS = {
+    "csv": SourceType.HISTORICAL_CSV,
+    "jsonl": SourceType.HISTORICAL_JSON,
+    "stream_jsonl": SourceType.WEBSOCKET,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,17 +36,8 @@ class HistoricalProfile:
     timestamp: str = "iso8601"
 
     def __post_init__(self) -> None:
-        if self.format not in ("csv", "jsonl") or self.timestamp != "iso8601":
-            raise ValueError("supported format: csv or jsonl; timestamp: iso8601")
-        for text in (
-            self.provider,
-            self.provider_symbol,
-            *self.fields.values(),
-            *self.instruments.keys(),
-        ):
-            if not isinstance(text, str) or "\x00" in text:
-                raise ValueError("profile text must contain no NUL")
-            text.encode("utf-8")
+        if self.format not in _FORMATS or self.timestamp != "iso8601":
+            raise ValueError("supported format: csv, jsonl or stream_jsonl; timestamp: iso8601")
         required_text(self.provider, "provider")
         required_text(self.provider_symbol, "provider_symbol")
         parse_pip_size(self.pip_size)
@@ -60,8 +55,7 @@ class HistoricalProfile:
             raise ValueError("supply 1 to 32 explicit instrument mappings")
         for external, internal in self.instruments.items():
             required_text(external, "external instrument")
-            if internal != "BOOM_1000":
-                raise ValueError("only BOOM_1000 is supported")
+            require_instrument_id(internal, "internal instrument")
         # Use the existing bounded immutable metadata contract for serialized profiles.
         from types import MappingProxyType
 
@@ -133,7 +127,7 @@ class HistoricalAdapter:
         return AcquisitionContext(
             capture_id or uuid4(),
             p.provider,
-            SourceType.HISTORICAL_CSV if p.format == "csv" else SourceType.HISTORICAL_JSON,
+            _FORMATS[p.format],
             p.provider_symbol,
             p.pip_size,
             source_metadata={"historical_adapter": p.metadata()},
@@ -143,52 +137,29 @@ class HistoricalAdapter:
         if context != self.context(context.capture_id):
             raise ValueError("historical adapter requires its own matching acquisition context")
         p = self.profile
+        optional_keys = {"provider_tick_id", "received_at_utc"}
         records = (
             iter_csv_records(stream, context, columns=tuple(p.fields.values()))
             if p.format == "csv"
             else iter_json_records(
-                stream, context, tuple(v for k, v in p.fields.items() if k != "provider_tick_id")
+                stream,
+                context,
+                tuple(v for k, v in p.fields.items() if k not in optional_keys),
+                optional_columns=tuple(v for k, v in p.fields.items() if k in optional_keys),
+                received_at_column=p.fields.get("received_at_utc"),
             )
         )
+        has_provider_symbol = "provider_symbol" in p.fields
+        has_pip_size = "pip_size" in p.fields
         for raw, fields in records:
             mapped = {name: fields.get(column) for name, column in p.fields.items()}
-            external = mapped.get("instrument_id")
-            instrument = (
-                p.instruments.get(external, "UNMAPPED") if isinstance(external, str) else None
-            )
-            price = mapped.get("price")
-            if type(price) is int:
-                price = Decimal(price)
-            timestamp = mapped.get("event_time")
-            symbol = (
-                mapped.get("provider_symbol")
-                if "provider_symbol" in p.fields
-                else p.provider_symbol
-            )
-            pip = mapped.get("pip_size") if "pip_size" in p.fields else p.pip_size
-            identifier = mapped.get("provider_tick_id")
-            if identifier == "":
-                identifier = None
-            if identifier is not None and not isinstance(identifier, str):
-                from quantlab.quality import ErrorCode, QualityError, quality_event
-
-                raise QualityError(
-                    quality_event(
-                        context.capture_id,
-                        raw.source_position,
-                        ErrorCode.INVALID_SOURCE_METADATA,
-                        "provider_tick_id must be text or null",
-                    )
-                )
-            # Wrong scalar types stay invalid; they are never coerced to plausible prices/times.
-            yield TickCandidate(
+            yield normalize_mapped_record(
                 raw,
-                instrument,
-                symbol if isinstance(symbol, str) else None,
-                timestamp if isinstance(timestamp, str) or timestamp is None else "INVALID",
-                price if isinstance(price, (str, Decimal)) else None,
-                pip if isinstance(pip, (str, int)) else None,
-                identifier if isinstance(identifier, str) else None,
+                context,
+                mapped,
+                p.instruments,
+                has_provider_symbol=has_provider_symbol,
+                has_pip_size=has_pip_size,
             )
 
     def inspect(self, path: Path) -> dict[str, object]:

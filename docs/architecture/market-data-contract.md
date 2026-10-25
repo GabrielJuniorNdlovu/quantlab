@@ -6,13 +6,13 @@ read-only. Transport decoding, domain checks, and file I/O have separate owners.
 
 ## Module ownership
 
-- `models.py` defines immutable contracts, source enums, and constructor invariants.
-- `parsing.py` contains shared price, timestamp, identity, and precision rules.
+- `models.py` defines immutable contracts, source enums (`SourceType.expected_format`), canonical market-field equivalence helpers (`MarketTick.market_fields()`, `MarketTick.equivalent_market_fields()`), and constructor invariants.
+- `parsing.py` contains the single authoritative rules for nonblank UTF-8 text without NUL (`required_text`), internal instrument identity (`require_instrument_id`), exact Decimal prices (`parse_price`, `require_decimal_price`), UTC timestamps (`parse_timestamp`), UUIDs, positions, and quote precision (`parse_pip_size`, `require_price_precision`).
 - `metadata.py` validates and freezes structured provenance.
 - `csv_adapter.py` parses bounded binary CSV into `TickCandidate` values with exact evidence.
 - `csv_syntax.py` enforces quote placement shared by both CSV adapters.
-- `engine.py` validates candidates independently of files, CSV, networks, or databases.
-- `quality.py` defines structured diagnostics and fatal transport exceptions.
+- `engine.py` defines `normalize_mapped_record`, `validate_tick`, `AcquisitionValidator`, and `validate_acquisition`, validating candidates independently of files, CSV, networks, or databases.
+- `quality.py` defines structured diagnostics (`ErrorCode`, including `INVALID_INSTRUMENT` aliased to `UNSUPPORTED_INSTRUMENT`, and `redact_observed_value`) and fatal transport exceptions.
 - `legacy.py` retains the four-column adapter and its limited-fidelity model.
 - `cli.py` opens files and calculates streaming summaries.
 - `validation.py` preserves the module command and original compatibility imports.
@@ -174,14 +174,15 @@ Severity has three values:
 - `fatal` aborts transport or acquisition processing.
 
 Machine-readable codes include `INVALID_PRICE`, `INVALID_TIMESTAMP`,
-`MISSING_REQUIRED_FIELD`, `UNSUPPORTED_INSTRUMENT`, `OUT_OF_ORDER_EVENT`,
+`MISSING_REQUIRED_FIELD`, `UNSUPPORTED_INSTRUMENT` (aliased as `INVALID_INSTRUMENT`), `OUT_OF_ORDER_EVENT`,
 `INVALID_PRECISION`, `INVALID_SOURCE_POSITION`, `INVALID_SOURCE_METADATA`,
-`INVALID_CHECKSUM`, `INVALID_CSV`, `INVALID_CSV_SCHEMA`, `EMPTY_DATASET`,
+`INVALID_CHECKSUM`, `INVALID_JSON`, `INVALID_JSON_SCHEMA`, `INVALID_CSV`, `INVALID_CSV_SCHEMA`, `EMPTY_DATASET`,
 `INPUT_TOO_LARGE`, and `RECEPTION_BEFORE_EVENT`.
 
 Diagnostics do not echo raw payload values. Descriptions have at most 512
 characters, field names at most 64, and optional observed values at most 128.
-The engine leaves observed values absent.
+`redact_observed_value(value, *, limit=64)` sanitizes control characters and UTF-16 surrogates and bounds length when callers attach an observed value.
+The default engine rejection path leaves `observed_value` absent (`None`).
 
 `ValidationOutcome` contains `raw: RawObservation`, `tick: MarketTick | None`,
 and `events: tuple[DataQualityEvent, ...]`. Its `accepted` property is true only
@@ -197,9 +198,12 @@ resynchronized.
 ## Validation workflow and ordering
 
 `validate_tick(candidate, context, *, detected_at_utc=None)` validates one
-candidate independently of ordering. `validate_acquisition(candidates, context,
-*, detected_at_utc=None)` adds ordering and nonempty-acquisition checks.
-Neither function accepts paths, network clients, or database sessions.
+candidate independently of ordering. `AcquisitionValidator(context, *, detected_at_utc=None)`
+maintains per-acquisition ordering state (`validate(candidate)` and `finish()`) for both
+streaming/incremental consumers and batch `validate_acquisition(candidates, context,
+*, detected_at_utc=None)`. `normalize_mapped_record(...)` normalizes adapter-mapped
+records from CSV, historical JSON Lines, and recorded streaming JSON Lines into
+`TickCandidate` instances before validation. Neither function accepts paths, network clients, or database sessions.
 
 Each acquisition call has its own state. Positions must strictly increase;
 duplicates and decreasing positions produce `INVALID_SOURCE_POSITION`.

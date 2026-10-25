@@ -28,7 +28,14 @@ def dsn():
 
 def source(tmp_path, format):
     path = tmp_path / ("source." + format)
-    record = {"symbol": "Boom export", "time": "2026-01-01T00:00:00Z", "quote": "1000.10"}
+    record = (
+        {
+            "channel": "ticks",
+            "tick": {"symbol": "Boom export", "time": "2026-01-01T00:00:00Z", "quote": "1000.10"},
+        }
+        if format == "stream_jsonl"
+        else {"symbol": "Boom export", "time": "2026-01-01T00:00:00Z", "quote": "1000.10"}
+    )
     payload = (
         b"symbol,time,quote\r\nBoom export,2026-01-01T00:00:00Z,1000.10\r\n"
         b"Boom export,2026-01-01T00:00:00Z,1000.10\r\n"
@@ -39,10 +46,23 @@ def source(tmp_path, format):
     return path, payload
 
 
-@pytest.mark.parametrize("format", ["csv", "jsonl"])
+def source_profile(format):
+    if format == "stream_jsonl":
+        return profile(
+            "stream_jsonl",
+            fields={
+                "instrument_id": "tick.symbol",
+                "event_time": "tick.time",
+                "price": "tick.quote",
+            },
+        )
+    return profile(format)
+
+
+@pytest.mark.parametrize("format", ["csv", "jsonl", "stream_jsonl"])
 def test_import_reimport_validate_restart_replay(dsn, tmp_path, format):
     path, payload = source(tmp_path, format)
-    adapter = HistoricalAdapter(profile(format))
+    adapter = HistoricalAdapter(source_profile(format))
     archive = SourceArchive(tmp_path / "archive")
     source_id = str(uuid4())
     with Repository(dsn) as repo:

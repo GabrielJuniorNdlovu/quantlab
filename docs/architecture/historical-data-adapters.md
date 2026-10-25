@@ -7,11 +7,11 @@ accepts a local path and this adapter. No adapter writes SQL or creates another 
 
 ## Ownership and data flow
 
-`HistoricalProfile.load(path)` rejects duplicate JSON keys, unknown profile keys,
-unsupported versions, ambiguous bindings, unsupported instruments, and absent precision.
+`HistoricalProfile.load(path)` supports `"csv"` (`SourceType.HISTORICAL_CSV`), `"jsonl"` (`SourceType.HISTORICAL_JSON`), and `"stream_jsonl"` (`SourceType.WEBSOCKET`, supporting nested envelope field paths such as `"tick.symbol"` and optional per-message `"received_at_utc"`). It rejects duplicate JSON keys, unknown profile keys,
+unsupported versions, ambiguous bindings, unsupported instruments, and absent precision by delegating shared text, instrument, and precision checks to `quantlab.parsing`.
 `HistoricalAdapter.candidates(stream, context)` reads the verified archive stream and
-produces existing `RawObservation` and `TickCandidate` objects. Feature 01's
-`validate_acquisition` owns price, precision, timestamp, identity, and ordering validation.
+delegates candidate normalization to Feature 01's `normalize_mapped_record`, producing `RawObservation` and `TickCandidate` objects. Feature 01's
+`AcquisitionValidator` / `validate_acquisition` owns price, precision, timestamp, identity, and ordering validation.
 Feature 03's `IngestionCoordinator` owns archive preservation, dataset claims, batch writes,
 failure status, recovery, and completion. Feature 02 receives the existing resettable
 `Repository.tick_factory(dataset_id)` directly.

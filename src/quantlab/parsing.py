@@ -7,6 +7,7 @@ from uuid import UUID
 
 from quantlab.quality import ContractError, ErrorCode
 
+INSTRUMENT_ID = "BOOM_1000"
 MAX_PRICE_CHARS = 256
 MAX_PRICE_EXPONENT = 1000
 MAX_PIP_SIZE = 18
@@ -18,14 +19,35 @@ _PRICE = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
 
 
 def required_text(value: object, field: str, *, limit: int = 256) -> str:
-    """Require nonblank bounded text, without trimming the observed value."""
+    """Require nonblank bounded UTF-8 text without NUL or trimming."""
     if value is None or value == "" or (isinstance(value, str) and not value.strip()):
         raise ContractError(ErrorCode.MISSING_REQUIRED_FIELD, field, f"missing value for {field}")
-    if not isinstance(value, str) or len(value) > limit:
+    if not isinstance(value, str) or len(value) > limit or "\x00" in value:
         raise ContractError(
             ErrorCode.INVALID_SOURCE_METADATA, field, f"{field} requires bounded text"
         )
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ContractError(
+            ErrorCode.INVALID_SOURCE_METADATA, field, f"{field} requires valid UTF-8 text"
+        ) from exc
     return value
+
+
+def require_instrument_id(value: object, field: str = "instrument_id") -> str:
+    """Require the canonical Boom 1000 internal instrument identifier."""
+    instrument_id = required_text(value, field)
+    if instrument_id != INSTRUMENT_ID:
+        raise ContractError(ErrorCode.INVALID_INSTRUMENT, field, "unsupported instrument")
+    return instrument_id
+
+
+def require_decimal_price(value: object, field: str = "price") -> Decimal:
+    """Require a native positive finite Decimal price within numeric bounds."""
+    if not isinstance(value, Decimal):
+        raise ContractError(ErrorCode.INVALID_PRICE, field, f"canonical {field} must be Decimal")
+    return parse_price(value)
 
 
 def parse_price(value: str | Decimal | None) -> Decimal:

@@ -4,8 +4,13 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import Decimal
 
-from quantlab.models import INSTRUMENT_ID, MarketTick
-from quantlab.parsing import parse_price, parse_timestamp, require_position
+from quantlab.models import MarketTick
+from quantlab.parsing import (
+    parse_timestamp,
+    require_decimal_price,
+    require_instrument_id,
+    require_position,
+)
 from quantlab.replay import check_tick_order
 
 
@@ -21,16 +26,13 @@ class Candle:
     complete: bool
 
     def __post_init__(self) -> None:
-        if self.instrument_id != INSTRUMENT_ID:
-            raise ValueError("unsupported candle instrument")
+        require_instrument_id(self.instrument_id)
         opened = parse_timestamp(self.opened_at_utc)
         if opened.second or opened.microsecond:
             raise ValueError("candle opening time must align to a UTC minute")
         object.__setattr__(self, "opened_at_utc", opened)
         for price in (self.open, self.high, self.low, self.close):
-            if not isinstance(price, Decimal):
-                raise ValueError("candle prices must be Decimal")
-            parse_price(price)
+            require_decimal_price(price)
         if not self.low <= min(self.open, self.close) <= max(self.open, self.close) <= self.high:
             raise ValueError("inconsistent candle OHLC bounds")
         require_position(self.observation_count)

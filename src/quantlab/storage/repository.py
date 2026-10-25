@@ -16,7 +16,6 @@ from psycopg.types.json import Jsonb
 from quantlab.models import (
     AcquisitionContext,
     MarketTick,
-    SourceFormat,
     SourceType,
     ValidationOutcome,
 )
@@ -301,13 +300,11 @@ class Repository:
         last_time: Any,
     ) -> tuple[int, Any]:
         raw, tick = outcome.raw, outcome.tick
-        expected = (
-            SourceFormat.CSV if config["source_type"] == "historical_csv" else SourceFormat.JSON
-        )
+        source_type = SourceType(config["source_type"])
         if (
             raw.capture_id != run.capture_id
             or raw.provider != config["provider"]
-            or raw.source_format != expected
+            or raw.source_format != source_type.expected_format
             or not previous < raw.source_position < 2**63
         ):
             raise StorageError("observation context or source position does not match acquisition")
@@ -322,7 +319,7 @@ class Repository:
                 or tick.source_position != raw.source_position
                 or tick.provider_symbol != config["provider_symbol"]
                 or tick.pip_size != config["pip_size"]
-                or tick.source_type != SourceType(config["source_type"])
+                or tick.source_type != source_type
                 or (last_time is not None and tick.event_time_utc < last_time)
             ):
                 raise StorageError("tick context or event ordering does not match acquisition")

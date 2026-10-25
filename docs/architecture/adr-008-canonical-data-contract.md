@@ -56,10 +56,11 @@ Feature 01 requirement.
 ## Decision
 
 Use `validate_tick(candidate, context)` for source-independent record checks and
-`validate_acquisition(candidates, context)` for incremental acquisition checks.
-The generator keeps the last consumed position and accepted event time. Strictly
+`AcquisitionValidator(context)` / `validate_acquisition(candidates, context)` for incremental acquisition checks.
+`normalize_mapped_record` normalizes mapped fields from historical CSV, historical JSON Lines, and recorded streaming JSON messages into `TickCandidate` values before validation.
+The validator keeps the last consumed position and accepted event time. Strictly
 increasing positions detect duplicates and decreasing coordinates with constant
-state. Equal event timestamps retain source order.
+state. Equal event timestamps retain source order. `MarketTick.market_fields()` and `MarketTick.equivalent_market_fields()` compare canonical market fields (`instrument_id`, `provider_symbol`, `event_time_utc`, `price.as_tuple()`, `pip_size`) independently of transport provenance.
 
 A typed candidate separates parsing from validation. `MarketTick` constructors
 also enforce invariants, so direct construction cannot bypass the rules.

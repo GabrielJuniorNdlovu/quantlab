@@ -249,9 +249,9 @@ Feature 03 exposes a resettable factory of these same canonical ticks for
 Feature 02. It does not merge overlapping acquisitions automatically. QuantLab includes no broker connection, account authentication,
 order execution, or learned prediction model.
 
-## Historical exports (Feature 04)
+## Historical and recorded streaming exports (Feature 04)
 
-Import local mapped CSV or documented flat JSON Lines with an explicit source profile:
+Import local mapped CSV, flat historical JSON Lines (`jsonl`), or recorded streaming JSON Lines (`stream_jsonl` with `websocket` source type) with an explicit source profile:
 
 ```bash
 quantlab data inspect data/fixtures/historical/ticks.csv --config data/fixtures/historical/profile-csv.json
@@ -263,7 +263,7 @@ quantlab data replay DATASET_UUID --limit 100
 
 Inspection works without a database. Import uses the Feature 03 database/archive configuration,
 transactional batches, recovery and idempotence. Profiles explicitly map external instruments
-to `BOOM_1000` and supply documented symbol, timestamp and precision semantics. Original bytes,
+to `BOOM_1000` and supply documented symbol, timestamp and precision semantics. Equivalent observations across CSV, historical JSON, and recorded streaming JSON normalize to identical canonical `MarketTick.market_fields()` while preserving transport-specific provenance (`source_type`, `capture_id`, `source_position`, `received_at_utc`). Original bytes,
 repeated observations and source order are retained. Overlapping files stay separate datasets.
 See [import instructions and supported formats](docs/features/feature-04.md),
 [architecture](docs/architecture/historical-data-adapters.md), and
