@@ -224,3 +224,28 @@ def test_quality_and_failure_metrics_acknowledge_only_committed_work():
         broken.close()
     assert broken.metrics.committed == broken.metrics.rejected == 0
     assert broken.metrics.failures == 1 and broken.metrics.state == "FAILED"
+
+
+def test_queue_and_acknowledgement_lag_are_monotonic_and_drain_to_zero():
+    from threading import Event
+
+    entered, release = Event(), Event()
+
+    def sink(batch):
+        entered.set()
+        assert release.wait(2)
+
+    writer = BatchWriter(sink, BatchPolicy(max_records=1, queue_capacity=1))
+    try:
+        writer.submit(outcome())
+        assert entered.wait(2)
+        pending = writer.metrics
+        assert pending.buffered == 1 and pending.committed == 0
+        assert pending.persistence_lag_seconds > 0
+    finally:
+        release.set()
+        writer.close()
+    final = writer.metrics
+    assert final.last_batch_wait_seconds >= 0
+    assert final.max_acknowledgement_lag_seconds >= final.last_commit_latency_seconds > 0
+    assert final.persistence_lag_seconds == 0 and final.committed == 1

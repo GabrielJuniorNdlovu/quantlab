@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quantlab"
-version = "0.5.0"
+version = "0.6.0"
 description = "Local market data integrity checks for Boom 1000 Index research"
 requires-python = ">=3.11"
 dependencies = []
@@ -13,6 +13,7 @@ dependencies = []
 quantlab = "quantlab.storage_cli:main"
 
 [project.optional-dependencies]
+export = ["pyarrow==26.0.0"]
 storage = ["psycopg[binary]>=3.3.6,<3.4", "alembic>=1.20.1,<1.21"]
 dev = ["pytest>=8", "pytest-cov>=6", "hypothesis>=6", "ruff>=0.17", "mypy>=1.15"]
 
@@ -44,3 +45,7 @@ source = ["quantlab"]
 
 [tool.coverage.report]
 show_missing = true
+
+[[tool.mypy.overrides]]
+module = ["pyarrow", "pyarrow.*"]
+ignore_missing_imports = true

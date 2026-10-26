@@ -70,12 +70,11 @@ and restoring validation state. It must acknowledge only after `write_batch`
 succeeds or after reconciling a durable receipt. Submitted/queued counts are not
 checkpoints. A lost acknowledgement is not proof that the transaction failed.
 
-The collection branch `feat/04-data-collection-pipeline` contains same-capture
-resume and source-prefix verification APIs absent from main. It was inspected
-without merging. `commit_status` deliberately avoids colliding with its
-`checkpoint(run, outcomes)` method. This branch does not claim that collector
-resume integration has been executed. Registered immutable recorded sources can
-already persist incrementally through the shared batch interface.
+F04 adapts the preserved collection branch's verified-prefix recovery without merging
+that branch. `checkpoint` compares source replay with original receipts; `commit_status`
+remains the independent durable progress query. Modern collection can continue an
+IMPORTING capture, while legacy synchronous imports retain fresh-attempt interruption
+semantics. See [the ingestion design](market-data-ingestion.md) for guarantees and limits.
 
 ## Exact values and source truth
 

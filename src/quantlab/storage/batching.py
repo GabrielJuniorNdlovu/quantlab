@@ -31,6 +31,9 @@ class BatchMetrics:
     failures: int = 0
     last_commit_latency_seconds: float | None = None
     state: str = "OPEN"
+    last_batch_wait_seconds: float | None = None
+    max_acknowledgement_lag_seconds: float = 0.0
+    persistence_lag_seconds: float = 0.0
 
 
 class BatchWriter:
@@ -54,7 +57,7 @@ class BatchWriter:
         self._sink = sink
         self._policy = policy
         self._clock = clock
-        self._queue: deque[ValidationOutcome] = deque()
+        self._queue: deque[tuple[ValidationOutcome, float]] = deque()
         self._condition = Condition()
         self._closing = False
         self._failure: BaseException | None = None
@@ -62,6 +65,9 @@ class BatchWriter:
         self._buffered = 0
         self._rejected = self._quality_events = self._failures = 0
         self._last_latency: float | None = None
+        self._pending_since: float | None = None
+        self._last_wait: float | None = None
+        self._max_lag = 0.0
         self._worker = Thread(target=self._run, name="quantlab-batch-writer", daemon=True)
         self._worker.start()
 
@@ -86,6 +92,13 @@ class BatchWriter:
                 else "CLOSING"
                 if self._closing
                 else "OPEN",
+                self._last_wait,
+                self._max_lag,
+                max(0.0, time.monotonic() - self._pending_since)
+                if self._pending_since is not None
+                else max(0.0, time.monotonic() - self._queue[0][1])
+                if self._queue
+                else 0.0,
             )
 
     def _raise_failed(self) -> None:
@@ -106,7 +119,7 @@ class BatchWriter:
                 if self._closing:
                     raise ValueError("batch writer is closed")
                 if len(self._queue) < self._policy.queue_capacity:
-                    self._queue.append(outcome)
+                    self._queue.append((outcome, time.monotonic()))
                     self._submitted += 1
                     self._high_water = max(self._high_water, len(self._queue))
                     self._condition.notify_all()
@@ -140,6 +153,9 @@ class BatchWriter:
             "quality_events": metrics.quality_events,
             "failures": metrics.failures,
             "state": metrics.state,
+            "batch_wait_seconds": metrics.last_batch_wait_seconds,
+            "max_acknowledgement_lag_seconds": metrics.max_acknowledgement_lag_seconds,
+            "persistence_lag_seconds": metrics.persistence_lag_seconds,
         }
         if failure is not None:
             values["exception_type"] = type(failure).__name__
@@ -162,7 +178,10 @@ class BatchWriter:
                         self._condition.wait(remaining)
                     due = deadline is not None and self._clock() >= deadline
                     if self._queue and not due:
-                        pending.append(self._queue.popleft())
+                        outcome, enqueued_at = self._queue.popleft()
+                        pending.append(outcome)
+                        if self._pending_since is None:
+                            self._pending_since = enqueued_at
                         if deadline is None:
                             deadline = self._clock() + self._policy.max_wait_ms / 1000
                         self._buffered = len(pending)
@@ -175,6 +194,8 @@ class BatchWriter:
                     done = self._closing and not self._queue and not pending
                 if flush:
                     commit_started = time.monotonic()
+                    assert self._pending_since is not None
+                    wait = commit_started - self._pending_since
                     self._sink(tuple(pending))
                     latency = time.monotonic() - commit_started
                     with self._condition:
@@ -183,6 +204,9 @@ class BatchWriter:
                         self._rejected += sum(outcome.tick is None for outcome in pending)
                         self._quality_events += sum(len(outcome.events) for outcome in pending)
                         self._last_latency = latency
+                        self._last_wait = wait
+                        self._max_lag = max(self._max_lag, time.monotonic() - self._pending_since)
+                        self._pending_since = None
                         self._buffered = 0
                     capture_id = str(pending[0].raw.capture_id)
                     pending.clear()

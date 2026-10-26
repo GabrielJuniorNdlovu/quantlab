@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0
+
+- Unify historical and simulated asynchronous ingestion with bounded event backpressure.
+- Resume verified committed prefixes while preserving acquisition identity and diagnostics.
+- Reconcile exact repeated deliveries and report source interruptions, drops, and coverage.
+- Add additive collection-session migration, status/quality commands, and recovery procedures.
+- Export exact canonical observations and source metadata into reproducible chronological Parquet partitions.
+- Add real database, interruption, async shutdown, lineage, and export regression coverage.
+
 ## 0.4.0
 
 - Add PostgreSQL/TimescaleDB storage with additive packaged Alembic migrations.

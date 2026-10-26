@@ -59,15 +59,44 @@ def _parser() -> argparse.ArgumentParser:
     replay.add_argument("--end", type=parse_timestamp)
     replay.add_argument("--limit", type=int, default=100)
     data = commands.add_parser("data").add_subparsers(dest="operation", required=True)
-    for operation in ("inspect", "import"):
+    inspect = data.add_parser("inspect")
+    inspect.add_argument("dataset_path", type=Path)
+    inspect.add_argument("--config", type=Path, required=True)
+    for operation in ("import", "stream-simulate"):
         command = data.add_parser(operation)
         command.add_argument("dataset_path", type=Path)
         command.add_argument("--config", type=Path, required=True)
-        if operation == "import":
-            command.add_argument("--source-id", default="local-historical")
-            command.add_argument("--batch-size", type=int, default=100)
-    listing = data.add_parser("list")
+        command.add_argument("--source-id", default="local-historical")
+        command.add_argument("--batch-size", type=int, default=100)
+        command.add_argument("--max-wait-ms", type=int, default=1000)
+        command.add_argument("--queue-size", type=int, default=10000)
+        command.add_argument("--max-attempts", type=int, default=3)
+        command.add_argument("--no-monitoring", action="store_true")
+        command.add_argument("--no-resume", action="store_true")
+        command.add_argument("--no-recovery", action="store_true")
+        if operation == "stream-simulate":
+            command.add_argument("--rate", type=float, default=0)
+            command.add_argument("--interrupt-after", type=int)
+            command.add_argument("--disconnect-after", type=int)
+            command.add_argument("--redeliver-every", type=int)
+            command.add_argument("--drop-after", type=int)
+    listing = data.add_parser("list", aliases=["datasets"])
     listing.add_argument("--limit", type=int, default=100)
+    health = data.add_parser("status")
+    health.add_argument("--limit", type=int, default=100)
+    quality = data.add_parser("quality")
+    quality.add_argument("dataset_id", type=UUID)
+    quality.add_argument("--gap-threshold-seconds", type=float)
+    export = data.add_parser("export")
+    export.add_argument("dataset_id", type=UUID)
+    export.add_argument("--format", choices=["parquet"], required=True)
+    export.add_argument("--output", type=Path, required=True)
+    export.add_argument("--instrument", default="BOOM_1000")
+    export.add_argument("--train-end", type=parse_timestamp, required=True)
+    export.add_argument("--validation-end", type=parse_timestamp, required=True)
+    export.add_argument("--start", type=parse_timestamp)
+    export.add_argument("--end", type=parse_timestamp)
+    export.add_argument("--gap-threshold-seconds", type=float)
     validation = data.add_parser("validate")
     validation.add_argument("dataset_id", type=UUID)
     historical_replay = data.add_parser("replay")
@@ -106,19 +135,13 @@ def _execute(args: argparse.Namespace, dsn: str) -> int:
                 return 0
             if args.command == "data":
                 archive = SourceArchive(Path(os.environ.get("QUANTLAB_ARCHIVE_DIR", "raw-archive")))
-                if args.operation == "import":
-                    from quantlab.historical import HistoricalAdapter, HistoricalProfile
+                if args.operation in ("import", "stream-simulate", "status", "quality", "export"):
+                    from quantlab.collection_cli import execute_collection
 
-                    result = IngestionCoordinator(
-                        repo, archive, BatchPolicy(max_records=args.batch_size)
-                    ).import_historical(
-                        args.dataset_path,
-                        adapter=HistoricalAdapter(HistoricalProfile.load(args.config)),
-                        source_id=args.source_id,
-                    )
-                    _print(result)
-                    return 0 if result.status == "COMPLETE" else 1
-                if args.operation == "list":
+                    output, code = execute_collection(args, repo, archive)
+                    _print(output)
+                    return code
+                if args.operation in ("list", "datasets"):
                     _print(repo.manifests(limit=args.limit))
                     return 0
                 if args.operation == "validate":
@@ -211,9 +234,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         if not dsn:
             raise ValueError("set QUANTLAB_DATABASE_URL to your PostgreSQL connection URL")
         return _execute(args, dsn)
+    except KeyboardInterrupt:
+        print("QuantLab: interrupted; repeat the same source command to recover", file=sys.stderr)
+        return 130
     except ImportError:
         print(
-            'QuantLab storage: install the storage extra: pip install -e ".[storage]"',
+            'QuantLab: install the required extras: pip install -e ".[storage,export]"',
             file=sys.stderr,
         )
         return 2

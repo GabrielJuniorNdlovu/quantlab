@@ -97,7 +97,7 @@ def test_migration_idempotent_and_hypertable(dsn):
             "WHERE hypertable_name='market_ticks'"
         ).fetchone() == ("market_ticks",)
         assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == (
-            "0002_storage_guards",
+            "0003_collection",
         )
 
 

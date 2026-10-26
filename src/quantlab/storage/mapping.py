@@ -2,7 +2,7 @@
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import fields, is_dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -32,7 +32,7 @@ def wire_value(value: object) -> Any:
     return value
 
 
-def batch_digest(outcomes: tuple[ValidationOutcome, ...]) -> str:
+def batch_digest(outcomes: Iterable[ValidationOutcome]) -> str:
     digest = hashlib.sha256()
     for outcome in outcomes:
         digest.update(
