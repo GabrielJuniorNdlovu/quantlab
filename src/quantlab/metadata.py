@@ -72,3 +72,11 @@ def freeze_metadata(metadata: Mapping[str, object]) -> Mapping[str, MetadataValu
             "source_metadata",
             "invalid, oversized, or deeply nested source_metadata",
         ) from exc
+
+
+def json_value(value: object) -> object:
+    if isinstance(value, Mapping):
+        return {str(key): json_value(item) for key, item in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [json_value(item) for item in value]
+    return value

@@ -13,6 +13,25 @@ The implementation supports local CSV, JSON Lines, and explicitly mapped recorde
 or network connection at runtime. The supplied fixtures are deterministic
 engineering examples, not published market observations.
 
+## Qualify a market-data source
+
+Feature F00 adds an offline source registry and sample inspector:
+
+```bash
+quantlab source list
+quantlab source describe deriv-mt5-recording
+quantlab source report deriv-public-api
+```
+
+The public API candidate is blocked for the intended archive pending permission and
+Boom-specific identity evidence. The terminal-recording candidate is documented but lacks an
+authorized genuine sample and verified mapping. Neither source is qualified, and external
+connectivity is not implemented. Read the
+[source assessment](docs/data-sources/boom1000-source-assessment.md),
+[local inspection guide](docs/operations/source-qualification.md), and
+[F00 source contract](docs/architecture/market-data-source-contract.md).
+F00 was implemented without automated tests as requested; independent acceptance is pending.
+
 ## Set up the environment
 
 Use Python 3.11 or newer from the existing project directory:

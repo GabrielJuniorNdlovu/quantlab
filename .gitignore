@@ -22,3 +22,4 @@ replay-runs/
 raw-archive/
 .pgdata/
 .storage-test/
+source-reports/

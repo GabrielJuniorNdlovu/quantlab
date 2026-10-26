@@ -32,6 +32,9 @@ def _print(value: object) -> None:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="QuantLab durable research storage")
     commands = parser.add_subparsers(dest="command", required=True)
+    from quantlab.source_cli import add_arguments
+
+    add_arguments(commands.add_parser("source", help="qualify sources and inspect local samples"))
     db = commands.add_parser("db").add_subparsers(dest="operation", required=True)
     db.add_parser("init", help="apply additive Alembic migrations")
     db.add_parser("status", help="read database availability and storage usage")
@@ -222,6 +225,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     try:
+        if args.command == "source":
+            from quantlab.source_cli import execute
+            from quantlab.source_registry import encode_report
+
+            report, code = execute(args)
+            print(encode_report(report).decode("utf-8"), end="")
+            return code
         if args.command == "data" and args.operation == "inspect":
             from quantlab.historical import HistoricalAdapter, HistoricalProfile
 

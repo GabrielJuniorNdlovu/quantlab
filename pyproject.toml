@@ -21,7 +21,7 @@ dev = ["pytest>=8", "pytest-cov>=6", "hypothesis>=6", "ruff>=0.17", "mypy>=1.15"
 where = ["src"]
 
 [tool.setuptools.package-data]
-quantlab = ["py.typed", "data/*.csv", "storage/migrations/*.py", "storage/migrations/versions/*.py", "storage/migrations/*.mako"]
+quantlab = ["py.typed", "data/*.csv", "data/*.json", "storage/migrations/*.py", "storage/migrations/versions/*.py", "storage/migrations/*.mako"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
