@@ -9,7 +9,7 @@ inspectable audit log. Feature 03
 adds transactional PostgreSQL/TimescaleDB ingestion, original-source archival,
 recoverable import attempts, and completed-dataset replay.
 
-The implementation supports local CSV files. It requires no market credentials
+The implementation supports local CSV, JSON Lines, and explicitly mapped recorded JSON envelopes. It requires no market credentials
 or network connection at runtime. The supplied fixtures are deterministic
 engineering examples, not published market observations.
 
@@ -119,6 +119,30 @@ Read the [Feature 03 operations guide](docs/features/feature-03.md),
 [storage architecture](docs/architecture/time-series-storage.md),
 [database decision](docs/adr/ADR-003-time-series-database.md), and
 [verification evidence](docs/reviews/feature-03-implementation-review.md) before recovery or deployment.
+
+## Collect recorded data and export research partitions
+
+Feature 04 uses one coordinator for unpaced historical imports and asynchronous recorded
+simulation. It verifies committed prefixes on resume, retains repeated source observations,
+reports file completeness separately from market coverage, and exports exact chronological
+Parquet partitions.
+
+```bash
+quantlab data stream-simulate data/fixtures/historical/ticks.csv \
+	--config data/fixtures/historical/profile-csv.json \
+	--source-id synthetic-simulation --disconnect-after 2
+quantlab data status --limit 20
+quantlab data quality DATASET_UUID --gap-threshold-seconds 60
+quantlab data export DATASET_UUID --format parquet --output research-export \
+	--train-end 2026-01-01T00:00:00.5Z --validation-end 2026-01-01T00:00:02Z
+```
+
+Install `.[storage,export]` or the development lock for Parquet support. Source profiles
+remain explicit; no provider identifiers, reception timestamps, or missing ticks are invented.
+See the [collection guide](docs/operations/data-collection.md),
+[recovery guide](docs/operations/collection-recovery.md),
+[ingestion design](docs/architecture/market-data-ingestion.md), and
+[F04 review](docs/reviews/feature-04-implementation-review.md).
 
 ## Validate the legacy CSV fixtures
 

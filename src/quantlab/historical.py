@@ -1,7 +1,7 @@
 """Explicit historical source profiles and one incremental adapter facade."""
 
 from collections.abc import Iterator, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import BinaryIO
 from uuid import UUID, uuid4
@@ -15,7 +15,7 @@ from quantlab.parsing import parse_pip_size, require_instrument_id, required_tex
 
 _VERSION = "historical.v1"
 _REQUIRED = {"instrument_id", "event_time", "price"}
-_OPTIONAL = {"provider_symbol", "pip_size", "provider_tick_id", "received_at_utc"}
+_OPTIONAL = {"provider_symbol", "pip_size", "provider_tick_id", "received_at_utc", "price_basis"}
 _FORMATS = {
     "csv": SourceType.HISTORICAL_CSV,
     "jsonl": SourceType.HISTORICAL_JSON,
@@ -137,7 +137,7 @@ class HistoricalAdapter:
         if context != self.context(context.capture_id):
             raise ValueError("historical adapter requires its own matching acquisition context")
         p = self.profile
-        optional_keys = {"provider_tick_id", "received_at_utc"}
+        optional_keys = {"provider_tick_id", "received_at_utc", "price_basis"}
         records = (
             iter_csv_records(stream, context, columns=tuple(p.fields.values()))
             if p.format == "csv"
@@ -152,6 +152,26 @@ class HistoricalAdapter:
         has_pip_size = "pip_size" in p.fields
         for raw, fields in records:
             mapped = {name: fields.get(column) for name, column in p.fields.items()}
+            basis = mapped.get("price_basis")
+            if basis not in (None, ""):
+                from quantlab.quality import ContractError, ErrorCode, QualityError, quality_event
+
+                try:
+                    basis = required_text(basis, "price_basis")
+                    raw = replace(
+                        raw,
+                        source_metadata={**raw.source_metadata, "quote": {"price_basis": basis}},
+                    )
+                except ContractError as exc:
+                    raise QualityError(
+                        quality_event(
+                            context.capture_id,
+                            raw.source_position,
+                            ErrorCode.INVALID_SOURCE_METADATA,
+                            "invalid supplied price_basis metadata",
+                            field_name="price_basis",
+                        )
+                    ) from exc
             yield normalize_mapped_record(
                 raw,
                 context,

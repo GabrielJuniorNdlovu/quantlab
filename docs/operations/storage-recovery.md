@@ -52,9 +52,8 @@ copy. A conflicting digest stops the write. Exhausted retries propagate failure.
 
 A collector must retain ownership of unacknowledged observations and reconstruct
 its validation state from verified source evidence. Durable `commit_status` can
-reconcile committed progress; queue acceptance cannot. The unmerged F04 collection
-branch owns its source-prefix resume protocol and needs separate integration
-verification before use with this refactor.
+reconcile committed progress; queue acceptance cannot. The [F04 recovery procedure](collection-recovery.md) describes the adapted
+source-prefix resume protocol and the verified collection interface.
 
 ## Handle archive failures
 

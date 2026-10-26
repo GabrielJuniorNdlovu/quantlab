@@ -7,7 +7,7 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, TypeVar
-from uuid import NAMESPACE_URL, UUID, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 import psycopg
 from psycopg.rows import dict_row
@@ -16,11 +16,12 @@ from psycopg.types.json import Jsonb
 from quantlab.models import (
     AcquisitionContext,
     MarketTick,
+    RawObservation,
     SourceType,
     ValidationOutcome,
 )
 from quantlab.quality import DataQualityEvent, Severity
-from quantlab.storage import queries
+from quantlab.storage import collection_state, queries
 from quantlab.storage.bulk import insert_batch
 from quantlab.storage.contracts import (
     ArchivedSource,
@@ -35,7 +36,7 @@ from quantlab.storage.contracts import (
 )
 from quantlab.storage.mapping import batch_digest, manifest_row
 from quantlab.storage.migration_runner import migrate as migrate
-from quantlab.storage.replay_repository import observation, tick_factory
+from quantlab.storage.replay_repository import evidence_factory, observation, tick_factory
 from quantlab.storage.source_evidence import verify_complete_source
 
 if TYPE_CHECKING:
@@ -65,6 +66,7 @@ class Repository:
         self._connection: psycopg.Connection[dict[str, Any]] | None = None
         self._lock_key: int | None = None
         self._active: ImportRun | None = None
+        self.retry_count = 0
 
     def __enter__(self) -> "Repository":
         self._conn()
@@ -109,6 +111,7 @@ class Repository:
                 self.close()
                 if attempt + 1 == self.retry.max_attempts:
                     raise
+                self.retry_count += 1
                 _LOG.warning(
                     json.dumps(
                         {
@@ -127,7 +130,12 @@ class Repository:
 
     @contextmanager
     def claim(
-        self, source: ArchivedSource, context: AcquisitionContext, source_id: str = "local-csv"
+        self,
+        source: ArchivedSource,
+        context: AcquisitionContext,
+        source_id: str = "local-csv",
+        *,
+        resume: bool = False,
     ) -> Iterator[ImportRun]:
         if self._active is not None:
             raise BusyImport("repository already owns an active import")
@@ -173,6 +181,10 @@ class Repository:
                     )
                 if row["status"] == "COMPLETE":
                     return ImportRun(dataset_id, row["selected_capture"], True)
+                if resume:
+                    capture = collection_state.resumable(connection, row)
+                    if capture is not None:
+                        return ImportRun(dataset_id, capture)
                 existing = connection.execute(
                     "SELECT dataset_id,status FROM acquisition_runs WHERE capture_id=%s",
                     (context.capture_id,),
@@ -448,11 +460,66 @@ class Repository:
         )
         return tuple(manifest_row(row) for row in rows)
 
+    def dataset_info(self, dataset_id: UUID) -> dict[str, Any]:
+        from quantlab.parsing import require_uuid
+        from quantlab.storage.contracts import IncompleteDataset
+
+        require_uuid(dataset_id, "dataset_id")
+        with queries.read_connection(self.dsn) as connection:
+            row = connection.execute(
+                "SELECT * FROM dataset_manifests WHERE dataset_id=%s", (dataset_id,)
+            ).fetchone()
+        if row is None or row["status"] != "COMPLETE":
+            raise IncompleteDataset("selection requires an immutable completed dataset")
+        return row
+
+    def begin_collection(
+        self, run: ImportRun, settings: dict[str, object]
+    ) -> tuple[int, dict[str, object]]:
+        self._require_claim(run)
+        session = {**settings, "session_id": str(uuid4())}
+        return self._retry(lambda con: collection_state.begin(con, run, session))
+
+    def checkpoint(self, run: ImportRun, outcomes: Iterator[ValidationOutcome]) -> CommitStatus:
+        self._require_claim(run)
+        return collection_state.checkpoint(self._conn(), run, outcomes, self.commit_status)
+
+    def verify_redelivery(self, run: ImportRun, outcome: ValidationOutcome) -> None:
+        self._require_claim(run)
+        collection_state.verify_redelivery(self.dsn, run, outcome)
+
+    def update_collection(
+        self, run: ImportRun, status: str, metrics: dict[str, object], error: str | None = None
+    ) -> None:
+        self._require_claim(run)
+        self._retry(lambda con: collection_state.update(con, run, status, metrics, error))
+
+    def collection_status(self, limit: int = 100) -> tuple[dict[str, Any], ...]:
+        with queries.read_connection(self.dsn) as connection:
+            return collection_state.statuses(connection, limit)
+
+    def dataset_quality(
+        self, dataset_id: UUID, *, gap_threshold_seconds: float | None = None
+    ) -> dict[str, object]:
+        return collection_state.quality(self.dsn, dataset_id, gap_threshold_seconds)
+
     def commit_status(self, capture_id: UUID) -> CommitStatus:
         return queries.commit_status(self.dsn, capture_id)
 
     def acquisitions(self, dataset_id: UUID, *, limit: int = 100) -> tuple[CommitStatus, ...]:
         return queries.acquisitions(self.dsn, dataset_id, limit)
+
+    def evidence_factory(
+        self,
+        dataset_id: UUID,
+        *,
+        start_utc: datetime | None = None,
+        end_utc: datetime | None = None,
+        page_size: int = 1000,
+    ) -> Callable[[], Iterator[tuple[RawObservation, MarketTick]]]:
+        return evidence_factory(
+            self.dsn, dataset_id, start_utc=start_utc, end_utc=end_utc, page_size=page_size
+        )
 
     def observation(self, dataset_id: UUID, *, source_position: int) -> MarketTick | None:
         return observation(self.dsn, dataset_id, source_position)

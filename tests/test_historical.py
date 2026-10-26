@@ -228,3 +228,40 @@ def test_recorded_streaming_jsonl_envelope_and_invalid_envelope_errors():
     ):
         with pytest.raises(QualityError):
             scan(bad, config)
+
+
+def test_explicit_price_basis_mapping_preserves_record_metadata_without_inference():
+    config = profile(
+        fields={
+            "instrument_id": "symbol",
+            "event_time": "time",
+            "price": "quote",
+            "price_basis": "basis",
+        }
+    )
+    payload = b"symbol,time,quote,basis\nBoom export,2026-01-01T00:00:00Z,1000.10,bid\n"
+    (row,) = scan(payload, config)
+    assert row.accepted and row.raw.source_metadata["quote"]["price_basis"] == "bid"
+    assert row.raw.raw_payload == payload.split(b"\n", 1)[1]
+    (plain,) = scan(payload, profile())
+    assert "quote" not in plain.raw.source_metadata
+
+
+@pytest.mark.parametrize("basis", ["42", '"  "'])
+def test_invalid_price_basis_is_a_structured_source_failure(basis):
+    config = profile(
+        "jsonl",
+        fields={
+            "instrument_id": "symbol",
+            "event_time": "time",
+            "price": "quote",
+            "price_basis": "basis",
+        },
+    )
+    payload = (
+        '{"symbol":"Boom export","time":"2026-01-01T00:00:00Z",'
+        '"quote":"1000.10","basis":' + basis + "}\n"
+    ).encode()
+    with pytest.raises(QualityError) as error:
+        scan(payload, config)
+    assert error.value.event.error_code.value == "INVALID_SOURCE_METADATA"

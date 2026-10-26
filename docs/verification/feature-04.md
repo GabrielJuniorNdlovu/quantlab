@@ -1,10 +1,16 @@
 # Feature 04 verification
 
+This page preserves the initial 0.5 historical-adapter verification from its original branch
+and test environment. Current collection, recovery, export, and refactor evidence is in the
+[F04 implementation review](../reviews/feature-04-implementation-review.md).
+
 ## Baseline and scope
 
-The feature branch starts at verified `origin/main` merge `34b86b6`, containing Feature 03
-commit `383c628`. No merge or push was performed by the agent. The user's untracked
-`goal.md` remains unchanged and excluded from the commit. Its SHA-256 is
+The historical adapter branch started at `origin/main` merge `34b86b6`, containing Feature 03
+commit `383c628`. The current refactor branch instead starts at `origin/main` merge `3f355b1`,
+containing Feature 03 commit `7af7052`. The original branch's `goal.md` note and checksum below
+describe that earlier snapshot only; the current charter records the refactor status.
+No merge or push was performed by the agent. The original untracked `goal.md` had SHA-256
 `fa403438a403635005649bf32c01f5dc793e409eda753b12f19f8d1d2369a3fe`.
 
 The initial default suite passed before implementation. A focused test first failed during

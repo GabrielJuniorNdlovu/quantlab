@@ -4,6 +4,10 @@ Feature 04 imports authorized local CSV and JSON Lines exports through canonical
 and durable TimescaleDB storage. The checked-in examples are deterministic engineering
 fixtures, not broker history.
 
+**Current status:** The refactor implementation and non-database checks are present on
+`refactor/04-market-data-ingestion`. Database integration and required scale benchmarks remain
+unverified; see the [implementation review](../reviews/feature-04-implementation-review.md).
+
 ## Inspect an export
 
 Run inspection before importing. It reads the entire file and requires no database:
@@ -43,8 +47,8 @@ Every key below is required, and unknown keys are rejected:
 ```
 
 `fields` maps canonical logical names to exact source field names. `instrument_id`,
-`event_time`, and `price` are required. `provider_symbol`, `pip_size`, and `provider_tick_id`
-are optional bindings. Bindings must be unique. Instrument mappings require 1–32 explicit
+`event_time`, and `price` are required. `provider_symbol`, `pip_size`, `provider_tick_id`,
+`received_at_utc`, and `price_basis` are optional bindings. Bindings must be unique. Instrument mappings require 1–32 explicit
 external values; each target must be `BOOM_1000`. An internal-looking source value is rejected
 unless explicitly mapped. There is no case folding, trimming, or provider-symbol guessing.
 
@@ -52,7 +56,9 @@ The profile's provider label, provider symbol, and decimal-place precision are s
 assertions. Use genuinely documented metadata. If symbol or precision fields are bound,
 observed values must agree with those assertions. Missing event IDs stay absent, including
 blank CSV IDs and missing or null JSON IDs. Present IDs require text. No identifiers or
-reception times are generated as provider metadata.
+reception times are generated as provider metadata. A supplied reception timestamp normalizes
+through F01 and remains nullable when absent. A supplied price basis is retained as exact
+`source_metadata.quote.price_basis` text; no bid/ask/last value is inferred.
 
 Profiles are limited to 16 KiB and the existing canonical metadata budget. NUL and invalid
 Unicode source text are rejected before database persistence. Prices are decimal strings
@@ -80,6 +86,11 @@ UTC offset, and at most six fractional digits. Canonical times normalize to UTC 
 rounding. Original timestamps remain in raw bytes. Naive dates, epoch numbers, inferred units,
 and finer-than-microsecond timestamps are unsupported. Precision is never inferred from prices.
 
+`format: "stream_jsonl"` supports nested recorded envelopes through explicit dot paths,
+such as `tick.time` and `tick.quote`. It preserves the recorded source type and does not
+establish a live connection. Optional configured IDs, reception times, and price basis can
+be absent. Top-level JSON arrays remain unsupported.
+
 ## Import and replay
 
 Install the existing storage extra, start the documented database, and set
@@ -103,7 +114,8 @@ accepts `--start` and `--end` with inclusive start and exclusive end semantics. 
 `ingest` and `replay` commands remain compatible.
 
 Exit code 0 means success, 1 means inspection/import found invalid data, and 2 means a
-configuration, I/O, validation-operation, or database error. Argument errors also return 2.
+configuration, I/O, validation-operation, or database error. Exit 3 means a paused incomplete
+collection; keyboard interruption returns 130. Argument errors also return 2.
 Import logs are structured JSON on stderr; results are JSON on stdout. Existing lifecycle
 logs include dataset/capture identifiers, committed counts, batch status, timing, and error
 classification without raw payload dumps or connection secrets.
@@ -112,8 +124,10 @@ classification without raw payload dumps or connection secrets.
 
 Keep the database and archive together in backups. Rerun the same import with the same
 profile and source identifier after restoring database availability. Completed imports return
-the same dataset and capture; incomplete attempts restart into a new capture. Earlier raw
-rows remain as evidence and cannot be replayed as a complete dataset. Source checksum
+the same dataset and capture. Modern `data import` resumes a verified committed prefix in
+the same capture. `--no-resume` creates a fresh attempt and retains the old evidence. Legacy
+`ingest import` and synchronous Python import methods retain fresh-attempt interruption
+semantics. Incomplete rows cannot be replayed as a complete dataset. Source checksum
 mismatch aborts explicitly. Validation verifies stored evidence independently of completion
 status and never repairs or promotes an acquisition.
 
@@ -121,14 +135,17 @@ Valid repeated observations remain separate records. Overlapping files remain in
 datasets under the retain-all reconciliation policy. No interpolation, implicit merge, or
 cross-file deduplication occurs.
 
-See [the adapter architecture](../architecture/historical-data-adapters.md) for ownership and
-whole-source proof, [verification](../verification/feature-04.md) for executable checks, and
-[benchmark results](../../benchmarks/historical-results.md) for measured performance.
+See [the ingestion architecture](../architecture/market-data-ingestion.md) for contracts and
+acknowledgement boundaries, [collection/export commands](../operations/data-collection.md),
+[recovery procedures](../operations/collection-recovery.md),
+[the implementation review](../reviews/feature-04-implementation-review.md), and
+[current benchmark status](../../benchmarks/ingestion-results.md). The original
+[adapter reference](../architecture/historical-data-adapters.md) describes framing details.
 
 ## Limits
 
-Only local regular files, configured CSV, and flat JSON Lines are supported. Provider API
-envelopes, top-level JSON arrays, network acquisition, compression, live broker connectivity,
+Only local regular files, configured CSV, flat JSON Lines, and explicitly mapped recorded
+JSON envelopes are supported. Top-level JSON arrays, network acquisition, compression, live broker connectivity,
 account authentication, signals, and order execution are outside this feature. No real provider
 history or provider metadata authenticity was verified. A passing contract does not establish
 that the source covers every market event.

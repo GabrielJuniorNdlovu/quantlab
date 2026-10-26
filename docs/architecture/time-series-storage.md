@@ -102,7 +102,7 @@ are required before publication. The repository also streams the preserved CSV
 header and committed raw row bytes through SHA-256 and compares their complete
 byte count and digest to the manifest. Finalizing a valid prefix cannot publish
 an incomplete file. This proof fetches at most 100 raw rows at once. Completing
-other source formats requires a future versioned source-framing contract. The final transaction completes both acquisition
+configured JSON Lines uses its explicit versioned source-framing contract. The final transaction completes both acquisition
 and manifest. A domain rejection is retained with its original bytes and quality
 event but makes the dataset fail. Empty or fatally malformed data cannot become
 a completed dataset. Guards reject completed-row mutation, ordinary evidence
@@ -153,9 +153,10 @@ silently merged; each factory selects one dataset and one completed capture.
 
 ## Batching and observability
 
-Historical imports validate every observation and synchronously fill batches up
-to `BatchPolicy.max_records`, default 100, then flush the EOF tail. They do not
-artificially pace the file. No asynchronous queue is needed for this path.
+Historical import facades use the same unpaced F04 coordinator and bounded F03 writer
+as recorded simulation. Every observation passes F01, batches flush at the configured
+size/deadline, and completion drains the EOF tail. Files are not artificially paced;
+backpressure reflects storage capacity.
 
 Future event-driven callers can drive one existing validation iterator and submit
 its `ValidationOutcome` values to `BatchWriter`. Use one ordered producer per
@@ -212,8 +213,9 @@ A later read-only source adapter must supply authorized original evidence,
 reviewed provider mapping, acquisition context, and every observed candidate in
 source order. It can reuse continuous Feature 01 validation and the bounded
 writer. It must define its own durable source acknowledgement and recovery
-protocol before making stronger live-delivery guarantees. Feature 03 implements
-historical canonical CSV imports and the reusable batching interface only.
+protocol before making stronger live-delivery guarantees. Feature 03 supplies the transaction, archive, query, and bounded batching contracts.
+The [F04 coordinator](market-data-ingestion.md) supplies historical and recorded-source
+scheduling and verified-prefix recovery.
 
 ## Migrations and deployment limits
 

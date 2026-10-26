@@ -36,7 +36,7 @@ python -m quantlab db init
 ```
 
 The final command reports `{"status": "schema_ready"}`. It applies packaged
-Alembic revisions through `0002_storage_guards`, including the Timescale hypertable
+Alembic revisions through `0003_collection`, including the Timescale hypertable
 and integrity guards. Running it again is safe. The installed `quantlab` command
 accepts the same arguments as `python -m quantlab`.
 

@@ -12,14 +12,16 @@ unsupported versions, ambiguous bindings, unsupported instruments, and absent pr
 `HistoricalAdapter.candidates(stream, context)` reads the verified archive stream and
 delegates candidate normalization to Feature 01's `normalize_mapped_record`, producing `RawObservation` and `TickCandidate` objects. Feature 01's
 `AcquisitionValidator` / `validate_acquisition` owns price, precision, timestamp, identity, and ordering validation.
-Feature 03's `IngestionCoordinator` owns archive preservation, dataset claims, batch writes,
-failure status, recovery, and completion. Feature 02 receives the existing resettable
+The shared `IngestionCoordinator` orchestrates preservation, validation, batching,
+failure status, recovery, and completion. Feature 03 owns its database claims and transactions. Feature 02 receives the existing resettable
 `Repository.tick_factory(dataset_id)` directly.
 
 The original canonical CSV reader delegates to the same bounded CSV framing function as
 the mapped reader. Its public signature and dataset fingerprint remain compatible.
 `import_csv` and `import_historical` share one private ingestion lifecycle. There is no
-intermediate conversion file, new canonical schema, database migration, or parser dependency.
+intermediate conversion file, new canonical schema, or parser dependency. The collection
+extension adds session migration `0003_collection`; see the
+[ingestion architecture](market-data-ingestion.md).
 
 ## Source evidence and completion
 
@@ -46,8 +48,9 @@ retains its existing header-and-payload completion proof. A valid prefix cannot 
 Rejected observations persist as Feature 01 outcomes. Malformed framing aborts with a
 structured fatal event; the archive still retains the offending bytes. Neither path can
 publish a complete dataset. Database interruption uses existing transactions, receipts,
-retry bounds, and claim locks. Restart reads the whole preserved source into a fresh capture,
-retains earlier attempts, and selects only the successfully completed capture for replay.
+retry bounds, and claim locks. Legacy synchronous imports restart into a fresh capture;
+modern collection can verify a committed prefix and continue the same capture. Both retain
+older evidence and expose only a completed selected capture for replay.
 
 ## Independent validation
 
