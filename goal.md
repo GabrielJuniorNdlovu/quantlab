@@ -2,7 +2,7 @@
 
 > **Document status:** Living project charter and source of truth
 > **Version:** 1.0 (initial specification)
-> **Updated:** 2026-10-24
+> **Updated:** 2026-10-26
 > **Initial instrument:** Boom 1000 Index only
 > **Primary workspace:** `~/quantlab`
 > **Languages:** Python for research/data services; MQL5 for MT5 chart visualization
@@ -78,16 +78,17 @@ Use CI, tests, type checks, static analysis, code review, reproducible dependenc
 
 ## 3. Current inventory — implemented vs. discussed
 
-**Current branch:** `refactor/04-market-data-ingestion`, based on `origin/main` at `3f355b1` (Feature 03 merge `7af7052`). Feature 04 implementation is present. Current available checks pass (457 tests, 96 environment skips; Ruff, formatting, strict Mypy), but database integration and 100k/1m scale benchmarks remain unverified because Docker/PostgreSQL is unavailable. See `docs/reviews/feature-04-implementation-review.md`.
+**Current branch:** `feat/00-market-data-source-qualification`, based on Feature 04 commit `74a3288`. F00 adds a documentation-backed source registry and authorized-local-sample inspector. Source qualification is incomplete: external Boom identity, genuine samples, applicable storage permission, and integration guarantees remain unresolved. No F00 automated tests were created or run by explicit task instruction. Feature 04's database integration and scale verification remain pending; its earlier 457-pass/96-skip run is historical evidence, not F00 acceptance. See `docs/data-sources/boom1000-source-assessment.md` and `docs/reviews/feature-00-implementation.md`.
 
 | Item | Current evidence | Status | Required next action |
 |---|---|---|---|
-| Repository / VS Code workspace `~/quantlab` | Git repository verified on `main` (`c067994`) and `refactor/01-unified-market-data-validation` | **Verified** | Maintain branch hygiene and CI gates |
+| Repository / VS Code workspace `~/quantlab` | F00 branch based on F04 commit `74a3288`; earlier merged F03 baseline is `3f355b1` | **Implementation branch; not merged** | Maintain branch hygiene and review gates |
 | Installed project skills in `.agents/skills/` | Reviewed and applied `architect`, `tdd`, `thermo-nuclear-code-quality-review`, `benchmark-checklist`, `technical-writing`, `ponytail` | **Verified** | Apply skills on subsequent features |
+| Feature 00: Source discovery, qualification, and sample inspection | `source_registry.py`, `source_inspection.py`, `source_cli.py`, packaged `data/sources.json` | **Implemented; source qualification incomplete; independent testing pending** | Resolve permission and exact source identity; obtain authorized genuine samples; run the separate verification task |
 | Feature 01: Unified market-data validation & normalization | `src/quantlab/models.py`, `parsing.py`, `quality.py`, `engine.py`, `csv_adapter.py` (`9847cb4` + `refactor/01-unified-market-data-validation`) | **Verified & refactored** | Consumed as single source of validation truth by Features 02–04 |
 | Feature 01: Canonical tick schema (`market_tick.v1`) | `MarketTick` (`instrument_id`, `provider_symbol`, `event_time_utc`, `price`, `pip_size`, `source_type`, `capture_id`, `source_position`, `received_at_utc`, `provider_tick_id`) + `RawObservation` (`raw_observation.v1`) | **Verified** | Preserve compatibility and exact Decimal/UTC invariants |
-| Feature 02: Offline MT5 arrow-replay vertical slice | `src/quantlab/replay.py`, `candles.py`, `alerts.py`, `audit.py`, `chart.py` (`0b7829b`) | **Verified** | Connect to future chronology-safe research alerts |
-| Feature 03: Durable TimescaleDB ingestion/storage | `src/quantlab/storage/` (`34b86b6`) with raw source archival, batch receipts, and repeatable-read revalidation | **Verified** | Retain database constraints and whole-source evidence checks |
+| Feature 02: Offline MT5 arrow-replay vertical slice | `src/quantlab/replay.py`, `candles.py`, `alerts.py`, `audit.py`, `chart.py` (`8fc920e`) | **Existing refactored implementation** | Preserve causal replay and immutable signal semantics |
+| Feature 03: Durable TimescaleDB ingestion/storage | `src/quantlab/storage/` (`7af7052`) with raw source archival, batch receipts, and repeatable-read revalidation | **Existing refactored implementation** | Retain database constraints and whole-source evidence checks |
 | Feature 04: Historical & recorded streaming data adapters, recovery, quality, and Parquet exports | `src/quantlab/storage/ingestion.py`, `src/quantlab/collection.py`, `src/quantlab/dataset_export.py`, migration `0003_collection` | **Implementation present; verification incomplete** | Run isolated TimescaleDB integration/recovery suite and required 100k/1m benchmarks; update review evidence before merge |
 | ML models / feature pipeline | Logistic regression, LightGBM, TCN discussed | **Not built** | Define spike labeling (`PR-03`) and null baselines (`PR-06`) first |
 | Native MT5 terminal compilation | Prototype in `integrations/mt5/`; Python offline chart verified | **Prototype only** | Verify in native MetaEditor/MT5 when terminal environment is available |
@@ -97,7 +98,7 @@ Use CI, tests, type checks, static analysis, code review, reproducible dependenc
 
 - **Feature 01:** Keep a lean validated Tick value object; introduce separate source-envelope and ingestion-manifest objects, not dozens of indicator columns inside `Tick`. Add missing tests for timezone, format, precision, ordering and equal-timestamp observations. Record exact observed defects before refactoring.
 - **Feature 02:** Stop treating CSV import into SQLite as the final product. This is a useful subsystem, but must be driven by verified data needs, storage/replay invariants and a planned end-to-end vertical slice.
-- **Database decision:** **Not yet final.** Compare SQLite, PostgreSQL/TimescaleDB and Parquet/DuckDB according to measured input rate, retention, replay/query workload, recovery and deployment cost. Record choice in an Architecture Decision Record (ADR); avoid rewriting functioning persistence solely because the data is time series.
+- **Database implementation:** F03 already provides PostgreSQL/TimescaleDB persistence, and F04 adds research Parquet export. F00 reuses those boundaries. It introduces no storage replacement and does not resolve the pending F04 integration/scale checks.
 - **ML feature lists:** Returns, volatility, RSI, momentum, intervals and tick rate are **research hypotheses**, not validated indicators of an imminent event.
 - **Visualization requirement:** Move MT5-compatible arrows early in the plan. A backend-only research pipeline is incomplete relative to the intended user-facing product.
 - **Forecast target:** Decide tick-based vs. candle-based future horizon explicitly; determine how a forecast at a tick is mapped to the appropriate chart bar.
@@ -169,11 +170,11 @@ Every feature gets a separate `feat/<number>-<short-name>` Git branch, PR/review
 
 | ID | Feature | What must be delivered | Priority / status |
 |---|---|---|---|
-| F00 | Repository audit and architecture baseline | Verify F01, Git state, skills, coding standards, architecture decisions, test evidence | **Next — required** |
-| F01 | Market Data Integrity Engine | Schema validation, precision/UTC handling, rejected-record reporting, deterministic ordering | Existing feature; **audit required** |
-| F02 | **End-to-end arrow replay feasibility slice** | Small recorded/canned time series, predetermined sample alert timestamps, MT5-style non-repainting arrow visualization, audit log | **Next user-visible feature** |
-| F03 | Durable dataset provenance and storage | Immutable raw source, hashes, manifests, ordered ticks, idempotent imports, crash-safe persistence, deterministic replay | Planned |
-| F04 | Read-only historical dataset adapter | Authorized local dataset ingestion, schema mapping, quality monitoring, import history | Planned |
+| F00 | Market data source discovery and qualification | Source evidence, unresolved/verified mappings, local schema/provenance inspection, future adapter contract | **Implemented; source qualification incomplete; testing deferred by task policy** |
+| F01 | Market Data Integrity Engine | Schema validation, precision/UTC handling, rejected-record reporting, deterministic ordering | Existing refactored implementation; preserve contract |
+| F02 | **End-to-end arrow replay feasibility slice** | Recorded/canned time series, predetermined alert timestamps, offline arrow visualization and audit log | Existing refactored implementation; native MT5 verification remains separate |
+| F03 | Durable dataset provenance and storage | Immutable raw source, hashes, manifests, ordered ticks, idempotent imports, crash-safe persistence, deterministic replay | Existing implementation; preserve F03 ownership |
+| F04 | Recorded data collection and export | Explicit adapters, bounded collection, recovery, quality reports, chronological Parquet | Implementation present; integration and scale verification pending |
 | F05 | Spike-event labeling + market characterization | Versioned event definitions, distributions, intervals, independence tests | Planned |
 | F06 | Research feature pipeline | Causal rolling statistics, training-only fitting, missingness, time alignment, reproducible feature snapshots | Planned |
 | F07 | Statistical null models | Base rates, independent-event simulations for tests, hazard benchmarks, calibrated constant forecasts | Planned |
@@ -355,8 +356,8 @@ No ADR may claim technical compatibility without citing a primary specification 
 
 ## 13. Immediate next action
 
-**Audit the actual Feature 01 implementation before writing more code.** Codex should report current branch and commit SHA; enumerate relevant files; execute the existing test suite; verify data contracts against Section 4; and classify any necessary Feature 01 changes.
+**Complete source qualification before adding external acquisition.** Obtain applicable storage permission, verify the actual Boom instrument identity and precision, and inspect an authorized genuine sample. Review timestamp, price, identifier, coverage, and continuity semantics against the F00 contract before separately scoping an F04 adapter.
 
-Then implement **F02: the offline MT5 arrow-replay vertical slice** on a separate feature branch, with an event log and explicit no-repainting proof. This establishes feasibility of the promised visible experience early, while the rigorous data and forecasting research proceeds independently.
+Run F00's independent testing in the requested follow-up phase. Preserve the existing F04 database and scale-verification gates. The current development-only instruction overrides the usual test-first workflow for F00 only; it does not establish production readiness or waive acceptance.
 
 **Rule for future development:** A proposed feature is not *done* unless it is demonstrably connected to this document's goals, tested for failure, reproducible, reviewed and merged with evidence.

@@ -189,6 +189,8 @@ class HistoricalAdapter:
 
         digest = hashlib.sha256()
         observed = accepted = rejected = 0
+        first_event_time: str | None = None
+        last_event_time: str | None = None
         errors: list[dict[str, object]] = []
         context = self.context()
         from quantlab.quality import QualityError
@@ -206,6 +208,9 @@ class HistoricalAdapter:
                     observed += 1
                     accepted += outcome.accepted
                     rejected += not outcome.accepted
+                    if outcome.tick is not None:
+                        last_event_time = outcome.tick.event_time_utc.isoformat()
+                        first_event_time = first_event_time or last_event_time
                     for event in outcome.events:
                         if len(errors) < 20:
                             errors.append(
@@ -237,6 +242,8 @@ class HistoricalAdapter:
             "observed": observed,
             "accepted": accepted,
             "rejected": rejected,
+            "first_event_time_utc": first_event_time,
+            "last_event_time_utc": last_event_time,
             "errors": errors,
             "valid": observed > 0 and rejected == 0 and not errors,
         }

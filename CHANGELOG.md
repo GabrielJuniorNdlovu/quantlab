@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add the F00 documentation-backed market-data source registry and offline qualification CLI.
+- Inspect authorized local CSV, JSON, and JSON Lines schemas and provenance with optional F01 compatibility.
+- Document unresolved Boom source identity, storage permission, coverage, and future F04 integration requirements.
+- Defer all F00 automated testing to the explicitly requested follow-up phase.
+
 ## 0.6.0
 
 - Unify historical and simulated asynchronous ingestion with bounded event backpressure.

@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
+from quantlab.metadata import json_value as json_value
 from quantlab.models import AcquisitionContext, SourceType
 from quantlab.parsing import required_text
 
@@ -106,14 +107,6 @@ class RetryPolicy:
             or not 0 <= self.backoff_seconds <= 10
         ):
             raise StorageError("backoff_seconds must be finite from 0 to 10")
-
-
-def json_value(value: object) -> object:
-    if isinstance(value, Mapping):
-        return {str(key): json_value(item) for key, item in value.items()}
-    if isinstance(value, (tuple, list)):
-        return [json_value(item) for item in value]
-    return value
 
 
 def configuration(context: AcquisitionContext, source_id: str) -> dict[str, object]:

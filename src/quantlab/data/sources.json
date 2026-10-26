@@ -1,0 +1,163 @@
+{
+  "version": "source_registry.v1",
+  "sources": [
+    {
+      "source_id": "deriv-public-api",
+      "name": "Deriv public market-data API",
+      "publisher": "Deriv",
+      "source_type": "websocket_api",
+      "qualification": "BLOCKED",
+      "instruments": [
+        {
+          "internal_id": "BOOM_1000",
+          "display_name": "Boom 1000 Index",
+          "external_id": null,
+          "pip_size": null,
+          "price_basis": null,
+          "evidence": ["product"]
+        }
+      ],
+      "formats": ["json", "jsonl_recording"],
+      "historical": {
+        "documented": true,
+        "boom1000_availability": "UNVERIFIED",
+        "operations": ["ticks_history"],
+        "types": ["ticks", "OHLC candles"],
+        "representation": "history.prices and history.times parallel arrays, or candles array",
+        "new_api_default_count": 1000,
+        "default_is_not_retention_limit": true,
+        "retention_start": null,
+        "coverage_guaranteed": false,
+        "limitations": "License-adjusted intervals and latest available results are documented. Complete individual tick history, pagination tie handling and Boom 1000 retention are not established."
+      },
+      "streaming": {
+        "documented": true,
+        "boom1000_availability": "UNVERIFIED",
+        "operation": "ticks with subscribe=1",
+        "authentication": "Public market-data channel documented without authentication or OTP",
+        "response": "Optional tick object. Only tick.pip_size is required inside tick in the published schema.",
+        "ordering_guarantee": null,
+        "delivery_guarantee": null,
+        "resume_cursor": null,
+        "gap_free_reconnection": false,
+        "reconnect_guidance": "Documented exponential backoff, jitter and periodic ping; no gap-free replay guarantee found."
+      },
+      "timestamps": {
+        "event_field": "tick.epoch or history.times[]",
+        "representation": "integer epoch in published schema",
+        "subsecond_guarantee": null,
+        "reception_field": null,
+        "current_f04_compatibility": "Requires explicit source-specific epoch interpretation and history-array expansion. F04 historical.v1 accepts ISO8601 only."
+      },
+      "prices": {
+        "fields": ["tick.quote", "tick.bid", "tick.ask", "history.prices[]"],
+        "representation": "JSON number; decode exactly as Decimal",
+        "quote_basis": "quote described as market value; do not relabel it bid, ask or last",
+        "display_precision": "tick.pip_size and history response pip_size describe decimal display places",
+        "metadata_warning": "Active-symbol comparison example pip_size is a fractional increment. Do not cast it to canonical integer decimal places. Verify API version and units."
+      },
+      "access": {
+        "market_data_authentication_documented": "No auth",
+        "long_term_storage_permission": "BLOCKED",
+        "reason": "API Users terms section 2.1 prohibits feed-content storage; section 2.3 permits caching for up to 24 hours. Intended durable research archival needs applicable permission clarification.",
+        "rate_limits": "Published shared budgets; recheck official limits before any adapter. No connection or subscription capacity was measured.",
+        "account_required_by_quantlab_f00": false
+      },
+      "documentation": [
+        {"id":"product","url":"https://deriv.com/markets/derived-indices/synthetic-indices?tab=cfds","publisher":"Deriv","retrieved_on":"2026-10-26","kind":"VERIFIED_METADATA","claim":"Official CFD instrument listing includes Boom 1000 Index. It does not establish an Options API identifier or availability."},
+        {"id":"public","url":"https://developers.deriv.com/docs/options/ws-public/","publisher":"Deriv","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"Public Options market-data channel requires no authentication or OTP and excludes account-scoped operations."},
+        {"id":"symbols","url":"https://developers.deriv.com/comparison/active-symbols/","publisher":"Deriv","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"New symbol metadata uses underlying_symbol and underlying_symbol_name. No Boom 1000 response was obtained."},
+        {"id":"history-request","url":"https://raw.githubusercontent.com/deriv-com/deriv-api-schemas/master/schemas/ticks_history_request.schema.json","publisher":"Deriv","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"History supports ticks or candles, explicit boundaries and count, license adjustment and optional subscription. New count default is 1000, not a retention guarantee."},
+        {"id":"history-response","url":"https://raw.githubusercontent.com/deriv-com/deriv-api-schemas/master/schemas/ticks_history_response.schema.json","publisher":"Deriv","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"History uses parallel price/time arrays; candles use OHLC and epoch. History and arrays are optional in the response schema."},
+        {"id":"ticks","url":"https://raw.githubusercontent.com/deriv-com/deriv-api-schemas/master/schemas/ticks_response.schema.json","publisher":"Deriv","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"Optional tick contains optional epoch, quote, bid, ask, symbol and id, with pip_size required. tick.id is documented as a per-connection identifier usable to unsubscribe, not a durable event ID."},
+        {"id":"reconnect","url":"https://developers.deriv.com/docs/best-practices/","publisher":"Deriv","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"Reconnection guidance describes exponential backoff, jitter, periodic ping, error handling and subscription cleanup."},
+        {"id":"limits","url":"https://developers.deriv.com/docs/limits/","publisher":"Deriv","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"WebSocket requests share per-minute and per-hour budgets. Limits can change."},
+        {"id":"terms","url":"https://deriv.com/terms-and-conditions/api-users","publisher":"Deriv","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"Version R26|03, updated 2026-10-16. Sections 2.1 and 2.3 restrict feed storage and permit only temporary caching up to 24 hours."}
+      ],
+      "limitations": [
+        "API documentation is not proof that the Boom 1000 CFD instrument is available on the public Options market-data API.",
+        "No authorized genuine market sample supplied or inspected.",
+        "No complete history, ordering, unique event identity or loss-free delivery guarantee established.",
+        "Published schemas on the master branch can change. These are date-stamped documentation observations, not deployed API captures."
+      ],
+      "blockers": [
+        "Resolve permitted durable storage and research use with applicable source terms or explicit provider permission.",
+        "Verify the exact external identifier and availability on this API without assuming a CFD display name is an API symbol.",
+        "Obtain an authorized genuine recording and verified precision, price semantics, timestamp units and coverage metadata.",
+        "Review a future F04 epoch/array adapter and continuity policy separately."
+      ],
+      "sample_verification_reference": null,
+      "authorization_reference": null,
+      "integration_review_reference": null,
+      "non_event_id_fields": ["tick.id", "subscription.id", "req_id"]
+    },
+    {
+      "source_id": "deriv-mt5-recording",
+      "name": "Authorized Deriv MT5 terminal recording",
+      "publisher": "Deriv market data; MetaQuotes terminal interface",
+      "source_type": "terminal_recording",
+      "qualification": "DOCUMENTED",
+      "instruments": [
+        {"internal_id":"BOOM_1000","display_name":"Boom 1000 Index","external_id":null,"pip_size":null,"price_basis":null,"evidence":["product"]}
+      ],
+      "formats": ["MqlTick", "authorized CSV export", "authorized JSON or JSON Lines recording"],
+      "historical": {
+        "documented": true,
+        "boom1000_availability": "UNVERIFIED_FOR_USER_TERMINAL",
+        "operations": ["CopyTicksRange", "copy_ticks_range", "copy_rates_range"],
+        "retention_start": null,
+        "coverage_guaranteed": false,
+        "ordering": "MQL5 CopyTicksRange documents oldest-to-newest order and inclusive millisecond boundaries.",
+        "limitations": "Server/terminal history availability and synchronization apply. Range calls can return partial results or errors. Candles do not reconstruct individual ticks."
+      },
+      "streaming": {
+        "documented": true,
+        "mechanism": "Terminal NewTick event in an MQL5 EA; Python snapshot calls are not an event subscription",
+        "delivery_guarantee": null,
+        "gap_free_reconnection": false,
+        "limitations": "A NewTick event is not queued while one is queued or processing. OnTick alone cannot prove retention of every terminal tick. No bridge or EA is implemented in F00."
+      },
+      "timestamps": {
+        "event_fields": ["time", "time_msc"],
+        "representation": "UTC terminal times; time_msc is price-update time in milliseconds",
+        "reception_field": null,
+        "current_f04_compatibility": "Authorized export with explicit ISO8601 UTC timestamps can use a reviewed historical.v1 profile. Native numeric epochs need a separate adapter."
+      },
+      "prices": {
+        "fields": ["bid", "ask", "last"],
+        "representation": "MqlTick double fields; recorded decimal text must state exporter precision",
+        "quote_basis": "Choose and record one field explicitly; do not assume last is populated for this instrument",
+        "precision": "Verify exact terminal symbol digits and point from symbol_info; observed digits in a file are not a provider guarantee"
+      },
+      "access": {
+        "requirements": "Authorized terminal with applicable server history and market-data access; exact deployment/entitlements not established",
+        "long_term_storage_permission": "UNRESOLVED",
+        "reason": "Terminal API documentation establishes technical interfaces, not rights to archive or redistribute Deriv data. Applicable terms and recording authorization must be supplied.",
+        "account_required_by_quantlab_f00": false
+      },
+      "documentation": [
+        {"id":"product","url":"https://deriv.com/markets/derived-indices/synthetic-indices?tab=cfds","publisher":"Deriv","retrieved_on":"2026-10-26","kind":"VERIFIED_METADATA","claim":"Official CFD listing names Boom 1000 Index; no terminal symbol metadata was captured."},
+        {"id":"tick-structure","url":"https://www.mql5.com/en/docs/constants/structures/mqltick","publisher":"MetaQuotes","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"MqlTick supplies time, bid, ask, last, volume, time_msc, flags and volume_real. Fields can retain values unchanged from the previous update."},
+        {"id":"range","url":"https://www.mql5.com/en/docs/series/copyticksrange","publisher":"MetaQuotes","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"Tick range retrieval is ordered past-to-present with inclusive millisecond boundaries; timeout and small-buffer cases can return partial history."},
+        {"id":"python-range","url":"https://www.mql5.com/en/docs/python_metatrader5/mt5copyticksrange_py","publisher":"MetaQuotes","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"Python terminal tick retrieval uses explicit range/flags. Returned market times are UTC."},
+        {"id":"candles","url":"https://www.mql5.com/en/docs/python_metatrader5/mt5copyratesrange_py","publisher":"MetaQuotes","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"Candle retrieval is limited to available chart history and configured maximum bars."},
+        {"id":"events","url":"https://www.mql5.com/en/docs/event_handlers/ontick","publisher":"MetaQuotes","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"NewTick triggers EA callbacks but another NewTick is not queued if one is queued or executing."},
+        {"id":"symbol-metadata","url":"https://www.mql5.com/en/docs/python_metatrader5/mt5symbolinfo_py","publisher":"MetaQuotes","retrieved_on":"2026-10-26","kind":"DOCUMENTATION_CLAIM","claim":"symbol_info retrieves terminal-specific symbol properties, including digits and point. Example forex symbols are not Boom identity evidence."}
+      ],
+      "limitations": [
+        "Generic MetaQuotes interfaces do not establish a particular Deriv server's Boom 1000 history depth, symbol or precision.",
+        "No authorized genuine terminal sample, server identity, or export metadata was supplied.",
+        "Terminal tick snapshots, Options API quotes, bid, ask and last must not be treated as interchangeable."
+      ],
+      "blockers": [
+        "Obtain applicable recording/storage permission and an authorized sample with acquisition provenance.",
+        "Verify terminal symbol identity, digits, point, chosen price basis, UTC export and available history.",
+        "Verify completeness and reconnect recovery before a future collector integration."
+      ],
+      "sample_verification_reference": null,
+      "authorization_reference": null,
+      "integration_review_reference": null,
+      "non_event_id_fields": []
+    }
+  ]
+}

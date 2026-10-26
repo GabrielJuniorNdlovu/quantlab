@@ -2,6 +2,10 @@
 
 F04 owns source interpretation, delivery, recovery coordination, quality reporting, and research exports. F01 owns canonical validation. F03 owns PostgreSQL transactions and evidence. F02 consumes completed datasets. All functioning sources here are local recordings or deterministic synthetic fixtures. External market connectivity is unimplemented.
 
+F00's [source qualification contract](market-data-source-contract.md) defines the evidence and
+mapping a future permitted adapter needs. Its registry describes candidates and blockers;
+it does not activate a source or relax F04's completion and provenance rules.
+
 ## One coordinator
 
 `storage.ingestion.IngestionCoordinator.collect(source, stream=..., source_id=..., resume=True)` is the shared asynchronous path. Historical collection uses unpaced delivery; `SimulatedStream` adds event pacing and deterministic faults. `import_csv` and `import_historical` retain their synchronous signatures and return `DatasetManifest` through the same core.
